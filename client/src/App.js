@@ -7,6 +7,7 @@ import TradingStats from './components/TradingStats';
 import NotFound from './components/404';
 import Developers from './components/Developers';
 import Wallet from './components/Wallet';
+import About from './components/About'
 import './App.css';
 
 function App() {
@@ -47,6 +48,7 @@ function App() {
           } />
           <Route path="/404" element={<NotFound />} />
           <Route path="/developers" element={<Developers />} />
+	  <Route path="/about" element={<About />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
 

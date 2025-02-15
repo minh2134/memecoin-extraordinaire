@@ -23,7 +23,7 @@ const Navbar = ({ walletAddress, setIsWalletOpen, isDropdownOpen, setIsDropdownO
           <NavLink text="Home" onClick={() => navigate('/')} />
           <NavLink text="Trade" highlight={true} />
           <NavLink text="Market" />
-          <NavLink text="About" />
+          <NavLink text="About" onClick={() => navigate('/about')}/>
           <NavLink text="Developers" onClick={() => navigate('/developers')} />
           
           <div className="relative">
