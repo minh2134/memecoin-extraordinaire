@@ -38,7 +38,7 @@ const stats = [
     label: "Listed Memecoins"
   },
   {
-    value: "<0.1s",
+    value: "<3s",
     label: "Trading Latency"
   }
 ];

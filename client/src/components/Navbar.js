@@ -1,19 +1,26 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import memelogo from '../assets/memecoin.png';
 import { FaWallet, FaArrowDown } from 'react-icons/fa';
 
 const Navbar = ({ walletAddress, setIsWalletOpen, isDropdownOpen, setIsDropdownOpen, handleDisconnect }) => {
+  const navigate = useNavigate();
   const buttonClasses = "font-heading px-6 py-2 rounded-full bg-transparent border-2 border-gradient-to-r from-[#E5E5E5] to-[#8A2BE2] text-white hover:opacity-90 transition-opacity flex items-center";
 
   return (
     <nav className="bg-gradient-to-r from-[#0B041A] to-[#361480] px-6 py-2">
       <div className="container mx-auto flex items-center justify-between">
         <div className="flex items-center">
-          <img src={memelogo} alt="Memecoin Logo" className="h-[93px] w-auto" />
+          <img 
+            src={memelogo} 
+            alt="Memecoin Logo" 
+            className="h-[93px] w-auto cursor-pointer" 
+            onClick={() => navigate('/')}
+          />
         </div>
         
         <div className="flex items-center space-x-8">
-          <NavLink text="Home" />
+          <NavLink text="Home" onClick={() => navigate('/')} />
           <NavLink text="Trade" highlight={true} />
           <NavLink text="Market" />
           <NavLink text="About" />
@@ -65,9 +72,9 @@ const Navbar = ({ walletAddress, setIsWalletOpen, isDropdownOpen, setIsDropdownO
   );
 };
 
-const NavLink = ({ text, highlight = false }) => (
-  <a
-    href="#"
+const NavLink = ({ text, highlight = false, onClick }) => (
+  <button
+    onClick={onClick}
     className={`font-heading text-lg ${
       highlight 
         ? 'text-mystery-highlight' 
@@ -75,7 +82,7 @@ const NavLink = ({ text, highlight = false }) => (
     } transition-colors`}
   >
     {text}
-  </a>
+  </button>
 );
 
 export default Navbar; 

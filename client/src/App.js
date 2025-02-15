@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Features from './components/Features';
 import TradingStats from './components/TradingStats';
+import NotFound from './components/NotFound';
 import Wallet from './components/Wallet';
 import './App.css';
 
@@ -17,31 +19,42 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-mystery-dark">
-      <Navbar 
-        walletAddress={walletAddress} 
-        setIsWalletOpen={setIsWalletOpen}
-        isDropdownOpen={isDropdownOpen}
-        setIsDropdownOpen={setIsDropdownOpen}
-        handleDisconnect={handleDisconnect}
-      />
-      <Hero 
-        walletAddress={walletAddress} 
-        setIsWalletOpen={setIsWalletOpen}
-      />
-      <div className="bg-gradient-to-b from-[#0B041A] to-mystery-dark">
-        <main className="container mx-auto px-4">
-          <Features />
-          <TradingStats />
-        </main>
-      </div>
+    <Router>
+      <div className="min-h-screen bg-mystery-dark">
+        <Navbar 
+          walletAddress={walletAddress} 
+          setIsWalletOpen={setIsWalletOpen}
+          isDropdownOpen={isDropdownOpen}
+          setIsDropdownOpen={setIsDropdownOpen}
+          handleDisconnect={handleDisconnect}
+        />
+        
+        <Routes>
+          <Route path="/" element={
+            <>
+              <Hero 
+                walletAddress={walletAddress} 
+                setIsWalletOpen={setIsWalletOpen}
+              />
+              <div className="bg-gradient-to-b from-[#0B041A] to-mystery-dark">
+                <main className="container mx-auto px-4">
+                  <Features />
+                  <TradingStats />
+                </main>
+              </div>
+            </>
+          } />
+          <Route path="/404" element={<NotFound />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
 
-      <Wallet 
-        isOpen={isWalletOpen}
-        onClose={() => setIsWalletOpen(false)}
-        setWalletAddress={setWalletAddress}
-      />
-    </div>
+        <Wallet 
+          isOpen={isWalletOpen}
+          onClose={() => setIsWalletOpen(false)}
+          setWalletAddress={setWalletAddress}
+        />
+      </div>
+    </Router>
   );
 }
 
