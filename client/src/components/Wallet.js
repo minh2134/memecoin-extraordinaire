@@ -16,7 +16,7 @@ const wallets = [
   { name: 'Zengo', icon: zengo },
 ];
 
-const Wallet = ({ isOpen, onClose }) => {
+const Wallet = ({ isOpen, onClose, setWalletAddress }) => {
   const [selectedWallet, setSelectedWallet] = useState(null);
 
   if (!isOpen) return null;
@@ -28,8 +28,17 @@ const Wallet = ({ isOpen, onClose }) => {
   const handleModalClick = (e) => {
     if (e.target === e.currentTarget) {
       onClose();
-    } else {
       setSelectedWallet(null);
+    }
+  };
+
+  const handleQRCodeClick = () => {
+    if (selectedWallet) {
+      setWalletAddress('0x...BAa8');
+      onClose();
+      setSelectedWallet(null);
+    } else {
+      alert('Please select a wallet first!');
     }
   };
 
@@ -72,11 +81,12 @@ const Wallet = ({ isOpen, onClose }) => {
           <img 
             src={qrCode} 
             alt="QR Code"
-            className="w-48 h-48 mx-auto mb-6"
+            className={`w-48 h-48 mx-auto mb-6 cursor-pointer ${selectedWallet ? 'hover:opacity-80' : 'opacity-50'}`}
+            onClick={handleQRCodeClick}
           />
           <div className="space-y-2">
-            <p className="text-gray-300">1. Open your wallet app</p>
-            <p className="text-gray-300">2. Scan the QR code above to connect</p>
+            <p className="text-gray-300">1. Select your wallet from the left</p>
+            <p className="text-gray-300">2. Click the QR code to connect</p>
           </div>
         </div>
       </div>

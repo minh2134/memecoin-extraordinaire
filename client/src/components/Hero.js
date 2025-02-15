@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import cheems from '../assets/cheems.png';
 import dogeWow from '../assets/doge-wow.png';
-import Wallet from './Wallet';
+import { FaWallet } from 'react-icons/fa';
 
-const Hero = () => {
-  const [isWalletOpen, setIsWalletOpen] = useState(false);
+const Hero = ({ walletAddress, setIsWalletOpen }) => {
+  const buttonClasses = "font-heading px-6 py-2 rounded-full bg-transparent border-2 border-gradient-to-r from-[#E5E5E5] to-[#8A2BE2] text-white hover:opacity-90 transition-opacity flex items-center";
 
   return (
     <div className="relative overflow-hidden">
@@ -49,19 +49,21 @@ const Hero = () => {
         <div className="container mx-auto px-4">
           <div className="flex flex-col lg:flex-row items-center justify-between">
             <div className="lg:w-1/2 z-10">
-              <div className="flex gap-4">
-                <button 
-                  className="font-heading px-8 py-3 rounded-full bg-mystery-accent text-white hover:opacity-90 transition-opacity"
-                  onClick={() => setIsWalletOpen(true)}
-                >
-                  Link Wallet
-                </button>
-                <button className="font-heading px-8 py-3 rounded-full bg-transparent border-2 border-mystery-accent text-white hover:opacity-90 transition-opacity">
-                  Get a Wallet
-                </button>
-              </div>
+              {!walletAddress && (
+                <div className="flex gap-4">
+                  <button 
+                    className="font-heading px-8 py-3 rounded-full bg-mystery-accent text-white hover:opacity-90 transition-opacity"
+                    onClick={() => setIsWalletOpen(true)}
+                  >
+                    Link Wallet
+                  </button>
+                  <button className="font-heading px-8 py-3 rounded-full bg-transparent border-2 border-mystery-accent text-white hover:opacity-90 transition-opacity">
+                    Get a Wallet
+                  </button>
+                </div>
+              )}
             </div>
-            <div className="lg:w-1/2 relative mt-8 lg:mt-0">
+            <div className={`${walletAddress ? 'w-full' : 'lg:w-1/2'} relative mt-8 lg:mt-0`}>
               <div className="flex flex-col items-center">
                 <img 
                   src={cheems} 
@@ -76,11 +78,6 @@ const Hero = () => {
           </div>
         </div>
       </div>
-
-      <Wallet 
-        isOpen={isWalletOpen}
-        onClose={() => setIsWalletOpen(false)}
-      />
     </div>
   );
 };
