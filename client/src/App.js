@@ -5,6 +5,7 @@ import Hero from './components/Hero';
 import Features from './components/Features';
 import TradingStats from './components/TradingStats';
 import NotFound from './components/404';
+import Developers from './components/Developers';
 import Wallet from './components/Wallet';
 import './App.css';
 
@@ -45,6 +46,7 @@ function App() {
             </>
           } />
           <Route path="/404" element={<NotFound />} />
+          <Route path="/developers" element={<Developers />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
 

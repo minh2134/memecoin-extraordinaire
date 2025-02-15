@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import memelogo from '../assets/memecoin.png';
 import { FaWallet, FaArrowDown } from 'react-icons/fa';
 
@@ -24,7 +24,7 @@ const Navbar = ({ walletAddress, setIsWalletOpen, isDropdownOpen, setIsDropdownO
           <NavLink text="Trade" highlight={true} />
           <NavLink text="Market" />
           <NavLink text="About" />
-          <NavLink text="Developers" />
+          <NavLink text="Developers" onClick={() => navigate('/developers')} />
           
           <div className="relative">
             {!walletAddress ? (
