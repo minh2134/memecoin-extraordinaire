@@ -4,7 +4,7 @@ import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Features from './components/Features';
 import TradingStats from './components/TradingStats';
-import NotFound from './components/NotFound';
+import NotFound from './components/404';
 import Wallet from './components/Wallet';
 import './App.css';
 
