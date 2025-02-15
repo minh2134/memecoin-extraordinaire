@@ -49,7 +49,7 @@ const Hero = ({ walletAddress, setIsWalletOpen }) => {
         <div className="container mx-auto px-4">
           <div className="flex flex-col lg:flex-row items-center justify-between">
             <div className="lg:w-1/2 z-10">
-              {!walletAddress && (
+              {!walletAddress ? (
                 <div className="flex gap-4">
                   <button 
                     className="font-heading px-8 py-3 rounded-full bg-mystery-accent text-white hover:opacity-90 transition-opacity"
@@ -60,6 +60,16 @@ const Hero = ({ walletAddress, setIsWalletOpen }) => {
                   <button className="font-heading px-8 py-3 rounded-full bg-transparent border-2 border-mystery-accent text-white hover:opacity-90 transition-opacity">
                     Get a Wallet
                   </button>
+                </div>
+              ) : (
+                <div className="text-center lg:text-left">
+                  <h3 className="font-heading text-3xl bg-gradient-to-r from-[#FF6B6B] via-[#FFE66D] to-[#4ECDC4] text-transparent bg-clip-text mb-4">
+                    Much Success! Very Connect! 🎉
+                  </h3>
+                  <p className="font-heading text-xl text-gray-300">
+                    Wow! Such smart trader! Your wallet is now ready to do the big stonks! 
+                    <span className="block mt-2">Time to trade like pro doge! To the moon! 🚀🌕</span>
+                  </p>
                 </div>
               )}
             </div>
