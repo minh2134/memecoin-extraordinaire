@@ -28,13 +28,22 @@ const Transactions = ({ transactions = [] }) => {
               {transactions.map((tx, index) => (
                 <div 
                   key={index}
-                  className="bg-[#1E1E1E]/50 rounded-xl p-6 border border-mystery-accent/30 hover:border-mystery-accent transition-colors duration-300"
+                  className={`bg-[#1E1E1E]/50 rounded-xl p-6 border ${
+                    tx.status === 'Failed' 
+                      ? 'border-red-500/30 hover:border-red-500' 
+                      : 'border-mystery-accent/30 hover:border-mystery-accent'
+                  } transition-colors duration-300`}
                 >
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <p className="font-heading text-lg text-white">
-                        {tx.tradingToken} → {tx.receivingToken}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-heading text-lg text-white">
+                          {tx.tradingToken} → {tx.receivingToken}
+                        </p>
+                        {tx.status === 'Failed' && (
+                          <span className="text-sm text-red-500 font-heading">Failed</span>
+                        )}
+                      </div>
                       <p className="text-gray-400 text-sm">{tx.date}</p>
                     </div>
                     <div className="text-right">
@@ -48,7 +57,7 @@ const Transactions = ({ transactions = [] }) => {
                   </div>
                   <div className="text-sm text-gray-400">
                     <p>From: {tx.senderWallet}</p>
-                    <p>To: {tx.receiverWallet}</p>
+                    {tx.receiverWallet && <p>To: {tx.receiverWallet}</p>}
                   </div>
                 </div>
               ))}

@@ -36,15 +36,16 @@ function App() {
     return wallet;
   };
 
-  const handleNewTransaction = (fromToken, fromAmount, toToken, toAmount) => {
+  const handleNewTransaction = (fromToken, fromAmount, toToken, toAmount, failed = false) => {
     const newTransaction = {
       senderWallet: walletAddress,
-      receiverWallet: generateRandomWallet(),
+      receiverWallet: failed ? null : generateRandomWallet(),
       date: new Date().toLocaleString(),
       tradingToken: fromToken,
       tradingAmount: fromAmount,
       receivingToken: toToken,
-      receivingAmount: toAmount
+      receivingAmount: toAmount,
+      status: failed ? 'Failed' : 'Success'
     };
     setTransactions([newTransaction, ...transactions]);
   };
