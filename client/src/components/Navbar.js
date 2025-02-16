@@ -5,35 +5,57 @@ import { FaWallet, FaArrowDown } from 'react-icons/fa';
 
 const Navbar = ({ walletAddress, setIsWalletOpen, isDropdownOpen, setIsDropdownOpen, handleDisconnect }) => {
   const navigate = useNavigate();
-  const buttonClasses = "font-heading px-6 py-2 rounded-full bg-transparent border-2 border-gradient-to-r from-[#E5E5E5] to-[#8A2BE2] text-white hover:opacity-90 transition-opacity flex items-center";
+  const buttonClasses = "font-heading px-6 py-2 rounded-full bg-gradient-to-r from-[#503BEE] to-[#8A2BE2] hover:from-[#8A2BE2] hover:to-[#503BEE] text-white transition-all duration-300 shadow-lg hover:shadow-mystery-accent/50 flex items-center";
+
+  const NavLink = ({ text, onClick, highlight }) => (
+    <button
+      onClick={onClick}
+      className={`font-heading relative group ${
+        highlight 
+          ? 'text-2xl font-bold mx-4' 
+          : 'text-white text-lg mx-4'
+      } transition-colors`}
+    >
+      {highlight ? (
+        <span className="text-[#FFE600] group-hover:text-white group-hover:border-[#FFE600] transition-all duration-300">
+          {text}
+        </span>
+      ) : (
+        <>
+          {text}
+          <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-mystery-accent transition-all duration-300 group-hover:w-full"></span>
+        </>
+      )}
+    </button>
+  );
 
   return (
-    <nav className="bg-gradient-to-r from-[#0B041A] to-[#361480] px-6 py-2">
+    <nav className="bg-gradient-to-r from-[#0B041A] to-[#361480] px-6 py-0 shadow-lg">
       <div className="container mx-auto flex items-center justify-between">
         <div className="flex items-center">
           <img 
             src={memelogo} 
             alt="Memecoin Logo" 
-            className="h-[93px] w-auto cursor-pointer" 
+            className="h-[120px] w-auto cursor-pointer hover:scale-105 transition-transform duration-300" 
             onClick={() => navigate('/')}
           />
         </div>
         
-        <div className="flex items-center space-x-8">
+        <div className="hidden md:flex items-center space-x-10">
           <NavLink text="Home" onClick={() => navigate('/')} />
           <NavLink text="Trade" highlight={true} />
-          <NavLink text="Market" />
-          <NavLink text="About" onClick={() => navigate('/about')}/>
+          <NavLink text="Market" onClick={() => navigate('/market')} />
           <NavLink text="Developers" onClick={() => navigate('/developers')} />
-          
-          <div className="relative">
+          <NavLink text="About" onClick={() => navigate('/about')} />
+        
+          <div className="relative ml-4">
             {!walletAddress ? (
               <button 
                 className={buttonClasses}
                 onClick={() => setIsWalletOpen(true)}
               >
                 <span>Link Wallet</span>
-                <FaWallet className="ml-2" />
+                <FaWallet className="ml-2 animate-pulse" />
               </button>
             ) : (
               <div>
@@ -47,15 +69,15 @@ const Navbar = ({ walletAddress, setIsWalletOpen, isDropdownOpen, setIsDropdownO
                 </button>
                 {isDropdownOpen && (
                   <div 
-                    className="absolute right-0 mt-2 w-48 bg-[#1E1E1E] border-2 border-gradient-to-r from-[#E5E5E5] to-[#8A2BE2] rounded-lg shadow-lg z-10"
+                    className="absolute right-0 mt-2 w-48 bg-[#1E1E1E] border border-mystery-accent/30 rounded-xl shadow-xl backdrop-blur-sm z-10 overflow-hidden"
                     onMouseLeave={() => setIsDropdownOpen(false)}
                   >
                     <ul className="font-heading">
-                      <li className="px-4 py-2 text-white hover:bg-mystery-accent/20 cursor-pointer">
+                      <li className="px-4 py-3 text-white hover:bg-mystery-accent/20 cursor-pointer transition-colors duration-200">
                         Recent Transactions
                       </li>
                       <li 
-                        className="px-4 py-2 text-white hover:bg-mystery-accent/20 cursor-pointer"
+                        className="px-4 py-3 text-white hover:bg-mystery-accent/20 cursor-pointer transition-colors duration-200"
                         onClick={handleDisconnect}
                       >
                         Disconnect
@@ -71,18 +93,5 @@ const Navbar = ({ walletAddress, setIsWalletOpen, isDropdownOpen, setIsDropdownO
     </nav>
   );
 };
-
-const NavLink = ({ text, highlight = false, onClick }) => (
-  <button
-    onClick={onClick}
-    className={`font-heading text-lg ${
-      highlight 
-        ? 'text-mystery-highlight' 
-        : 'text-white hover:text-mystery-accent'
-    } transition-colors`}
-  >
-    {text}
-  </button>
-);
 
 export default Navbar; 
