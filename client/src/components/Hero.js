@@ -2,11 +2,9 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import cheems from '../assets/cheems.png';
 import dogeWow from '../assets/doge-wow.png';
-import { FaWallet } from 'react-icons/fa';
 
 const Hero = ({ walletAddress, setIsWalletOpen }) => {
   const navigate = useNavigate();
-  const buttonClasses = "font-heading px-6 py-2 rounded-full bg-transparent border-2 border-gradient-to-r from-[#E5E5E5] to-[#8A2BE2] text-white hover:opacity-90 transition-opacity flex items-center";
 
   return (
     <div className="relative overflow-hidden">
