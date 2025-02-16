@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import tradeIcon from '../assets/trade-icon.png'
-import { cryptoList } from './Market'
 
 const Trade = ({ 
   isDropdownTradeFromOpen, 
@@ -14,6 +13,7 @@ const Trade = ({
   const [fromAmount, setFromAmount] = useState('');
   const [toAmount, setToAmount] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [transactionStatus, setTransactionStatus] = useState(null); // 'success' or 'failed'
   
   const tokens = [
     { name: 'Bitcoin', symbol: 'BTC' },
@@ -45,10 +45,32 @@ const Trade = ({
     setIsDropdownTradeToOpen(false);
   };
 
+  const handleSwapPositions = () => {
+    const tempFrom = fromState;
+    const tempFromAmount = fromAmount;
+    setFromState(toState);
+    setFromAmount(toAmount);
+    setToState(tempFrom);
+    setToAmount(tempFromAmount);
+  };
+
+  const handleAmountChange = (e, setter) => {
+    const value = e.target.value;
+    if (value === '' || (Number(value) >= 0 && !value.includes('e'))) {
+      setter(value);
+    }
+  };
+
+  const closeModal = () => {
+    setIsLoading(false);
+    setTransactionStatus(null);
+  };
+
   const handleSwap = async () => {
     if (!fromAmount || !toAmount) return;
     
     setIsLoading(true);
+    setTransactionStatus(null);
     
     await new Promise(resolve => setTimeout(resolve, 2000));
     
@@ -56,11 +78,12 @@ const Trade = ({
     
     if (isSuccess) {
       onTransaction(fromState, fromAmount, toState, toAmount);
+      setTransactionStatus('success');
     } else {
-      onTransaction(fromState, fromAmount, toState, toAmount, true); // true indicates failed transaction
+      onTransaction(fromState, fromAmount, toState, toAmount, true);
+      setTransactionStatus('failed');
     }
     
-    setIsLoading(false);
     setFromAmount('');
     setToAmount('');
   };
@@ -76,17 +99,20 @@ const Trade = ({
               <div className="flex flex-row w-full rounded-[30px] bg-[#372F47] justify-between items-center p-4">
                 <div className="flex items-center gap-4">
                   <div
-                    className="text-2xl font-heading cursor-pointer"
+                    className="text-2xl font-heading cursor-pointer hover:text-mystery-accent transition-colors"
                     onClick={() => setIsDropdownTradeFromOpen(true)}
                   > 
                     {fromState}
                   </div>
                   {isDropdownTradeFromOpen && (
-                    <div className="absolute left-0 mt-2 w-48 bg-[#1E1E1E] border border-mystery-accent/30 rounded-xl shadow-xl z-10">
+                    <div 
+                      className="absolute left-0 mt-2 w-48 bg-[#1E1E1E] border border-mystery-accent/30 rounded-xl shadow-xl z-10"
+                      onMouseLeave={() => setIsDropdownTradeFromOpen(false)}
+                    >
                       {tokens.map(token => (
                         <div 
                           key={token.symbol}
-                          className="px-4 py-3 text-white hover:bg-mystery-accent/20 cursor-pointer"
+                          className="px-4 py-3 text-white hover:bg-mystery-accent/20 cursor-pointer transition-colors"
                           onClick={() => handleFromTokenSelect(token.symbol)}
                         >
                           {token.symbol}
@@ -98,9 +124,9 @@ const Trade = ({
                 <input
                   type="number"
                   value={fromAmount}
-                  onChange={(e) => setFromAmount(e.target.value)}
+                  onChange={(e) => handleAmountChange(e, setFromAmount)}
                   placeholder="0.00"
-                  className="text-2xl font-heading bg-transparent text-right w-32 focus:outline-none placeholder-gray-500"
+                  className="text-2xl font-heading bg-transparent text-right w-32 focus:outline-none placeholder-gray-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
             </div>
@@ -110,7 +136,8 @@ const Trade = ({
               <img 
                 src={tradeIcon} 
                 alt="Trade" 
-                className="w-12 h-12"
+                className="w-12 h-12 cursor-pointer hover:scale-110 transition-transform"
+                onClick={handleSwapPositions}
               />
             </div>
 
@@ -120,17 +147,20 @@ const Trade = ({
               <div className="flex flex-row w-full rounded-[30px] bg-[#372F47] justify-between items-center p-4">
                 <div className="flex items-center gap-4">
                   <div
-                    className="text-2xl font-heading cursor-pointer"
+                    className="text-2xl font-heading cursor-pointer hover:text-mystery-accent transition-colors"
                     onClick={() => setIsDropdownTradeToOpen(true)}
                   > 
                     {toState}
                   </div>
                   {isDropdownTradeToOpen && (
-                    <div className="absolute left-0 mt-2 w-48 bg-[#1E1E1E] border border-mystery-accent/30 rounded-xl shadow-xl z-10">
+                    <div 
+                      className="absolute left-0 mt-2 w-48 bg-[#1E1E1E] border border-mystery-accent/30 rounded-xl shadow-xl z-10"
+                      onMouseLeave={() => setIsDropdownTradeToOpen(false)}
+                    >
                       {tokens.map(token => (
                         <div 
                           key={token.symbol}
-                          className="px-4 py-3 text-white hover:bg-mystery-accent/20 cursor-pointer"
+                          className="px-4 py-3 text-white hover:bg-mystery-accent/20 cursor-pointer transition-colors"
                           onClick={() => handleToTokenSelect(token.symbol)}
                         >
                           {token.symbol}
@@ -142,9 +172,9 @@ const Trade = ({
                 <input
                   type="number"
                   value={toAmount}
-                  onChange={(e) => setToAmount(e.target.value)}
+                  onChange={(e) => handleAmountChange(e, setToAmount)}
                   placeholder="0.00"
-                  className="text-2xl font-heading bg-transparent text-right w-32 focus:outline-none placeholder-gray-500"
+                  className="text-2xl font-heading bg-transparent text-right w-32 focus:outline-none placeholder-gray-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
             </div>
@@ -162,13 +192,35 @@ const Trade = ({
       </div>
 
       {/* Loading Modal */}
-      {isLoading && (
+      {isLoading && !transactionStatus && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-[#1E1E1E] p-8 rounded-xl text-center">
             <div className="animate-spin w-12 h-12 border-4 border-mystery-accent border-t-transparent rounded-full mx-auto mb-4"></div>
             <p className="text-white font-heading text-lg">
               Please wait while our Smart Contract find a suitable offer for you!
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Success/Failed Modal */}
+      {transactionStatus && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={closeModal}
+        >
+          <div className="bg-[#1E1E1E] p-8 rounded-xl text-center" onClick={e => e.stopPropagation()}>
+            <p className="text-white font-heading text-xl mb-6">
+              {transactionStatus === 'success' 
+                ? 'Transaction completed!' 
+                : 'Sorry! We cannot find you a suitable deal'}
+            </p>
+            <button
+              className="font-heading px-6 py-2 rounded-full bg-mystery-accent text-white hover:opacity-90 transition-opacity"
+              onClick={closeModal}
+            >
+              Close
+            </button>
           </div>
         </div>
       )}
