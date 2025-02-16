@@ -10,6 +10,7 @@ import Wallet from './components/Wallet';
 import About from './components/About'
 import Market from './components/Market';
 import Trade from './components/Trade';
+import Transactions from './components/Transactions';
 import './App.css';
 
 function App() {
@@ -18,11 +19,34 @@ function App() {
   const [isDropdownNavbarOpen, setIsDropdownNavbarOpen] = useState(false);
   const [isDropdownTradeFromOpen, setIsDropdownTradeFromOpen] = useState(false);
   const [isDropdownTradeToOpen, setIsDropdownTradeToOpen] = useState(false);
+  const [transactions, setTransactions] = useState([]);
 
   const handleDisconnect = () => {
     setWalletAddress('');
     setIsDropdownNavbarOpen(false);
     setIsDropdownTradeFromOpen(false);
+  };
+
+  const generateRandomWallet = () => {
+    const chars = '0123456789abcdef';
+    let wallet = '0x';
+    for (let i = 0; i < 40; i++) {
+      wallet += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return wallet;
+  };
+
+  const handleNewTransaction = (fromToken, fromAmount, toToken, toAmount) => {
+    const newTransaction = {
+      senderWallet: walletAddress,
+      receiverWallet: generateRandomWallet(),
+      date: new Date().toLocaleString(),
+      tradingToken: fromToken,
+      tradingAmount: fromAmount,
+      receivingToken: toToken,
+      receivingAmount: toAmount
+    };
+    setTransactions([newTransaction, ...transactions]);
   };
 
   return (
@@ -55,13 +79,16 @@ function App() {
           <Route path="/developers" element={<Developers />} />
 	        <Route path="/about" element={<About />} />
           <Route path="/market" element={<Market />} />
+          <Route path="/transactions" element={<Transactions transactions={transactions} />} />
           <Route path="/trade" element={
             <Trade 
               isDropdownTradeFromOpen={isDropdownTradeFromOpen}
               setIsDropdownTradeFromOpen={setIsDropdownTradeFromOpen}
               isDropdownTradeToOpen={isDropdownTradeToOpen}
               setIsDropdownTradeToOpen={setIsDropdownTradeToOpen}
-            />} />
+              onTransaction={handleNewTransaction}
+            />
+          } />
           <Route path="*" element={<NotFound />} />
         </Routes>
 

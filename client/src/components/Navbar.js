@@ -84,7 +84,10 @@ const Navbar = ({ walletAddress, setIsWalletOpen, isDropdownOpen, setIsDropdownO
                     onMouseLeave={() => setIsDropdownOpen(false)}
                   >
                     <ul className="font-heading">
-                      <li className="px-4 py-3 text-white hover:bg-mystery-accent/20 cursor-pointer transition-colors duration-200">
+                      <li 
+                        className="px-4 py-3 text-white hover:bg-mystery-accent/20 cursor-pointer transition-colors duration-200"
+                        onClick={() => navigate('/transactions')}
+                      >
                         Recent Transactions
                       </li>
                       <li 

@@ -5,13 +5,18 @@ const Trade = ({
   isDropdownTradeFromOpen, 
   setIsDropdownTradeFromOpen,
   isDropdownTradeToOpen,
-  setIsDropdownTradeToOpen
+  setIsDropdownTradeToOpen,
+  onTransaction
 }) => {
   
   const [fromState, setFromState] = useState('BTC');
   const [toState, setToState] = useState('ETH');
   const buttonClasses = "font-heading px-6 py-2 rounded-full bg-gradient-to-r from-[#503BEE] to-[#8A2BE2] hover:from-[#8A2BE2] hover:to-[#503BEE] text-white transition-all duration-300 shadow-lg hover:shadow-mystery-accent/50 flex items-center";
   
+  const handleSwap = () => {
+    onTransaction(fromState, "1.00", toState, "35.99");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0B041A] to-mystery-dark">
       <div className="container mx-auto px-4 py-24">
@@ -98,7 +103,12 @@ const Trade = ({
                 </div>
               </div>
             </div>
-            <button className={buttonClasses}>Swap</button>
+            <button 
+              className={buttonClasses}
+              onClick={handleSwap}
+            >
+              Swap
+            </button>
           </div>
         </div>
       </div>
