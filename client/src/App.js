@@ -58,7 +58,7 @@ function App() {
           <Route path="/trade" element={
             <Trade 
               isDropdownTradeFromOpen={isDropdownTradeFromOpen}
-              setIsDropdownOpen={setIsDropdownTradeFromOpen}
+              setIsDropdownTradeFromOpen={setIsDropdownTradeFromOpen}
               isDropdownTradeToOpen={isDropdownTradeToOpen}
               setIsDropdownTradeToOpen={setIsDropdownTradeToOpen}
             />} />

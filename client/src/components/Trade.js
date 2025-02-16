@@ -4,8 +4,7 @@ const Trade = ({
   isDropdownTradeFromOpen, 
   setIsDropdownTradeFromOpen,
   isDropdownTradeToOpen,
-  setIsDropdownTradeToOpen,
-  handleDisconnect
+  setIsDropdownTradeToOpen
 }) => {
   
   const buttonClasses = "font-heading px-6 py-2 rounded-full bg-gradient-to-r from-[#503BEE] to-[#8A2BE2] hover:from-[#8A2BE2] hover:to-[#503BEE] text-white transition-all duration-300 shadow-lg hover:shadow-mystery-accent/50 flex items-center";
@@ -27,12 +26,6 @@ const Trade = ({
               <ul className="font-heading">
                 <li className="px-4 py-3 text-white hover:bg-mystery-accent/20 cursor-pointer transition-colors duration-200">
                   Recent Transactions
-                </li>
-                <li 
-                  className="px-4 py-3 text-white hover:bg-mystery-accent/20 cursor-pointer transition-colors duration-200"
-                  onClick={handleDisconnect}
-                >
-                  Disconnect
                 </li>
               </ul>
             </div>
