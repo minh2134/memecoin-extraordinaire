@@ -1,8 +1,8 @@
 import React from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import memelogo from '../assets/memecoin.png';
 import memesmalllogo from '../assets/memecoin-logo.png';
-import { FaWallet, FaArrowDown, FaBars } from 'react-icons/fa';
+import { FaWallet, FaArrowDown } from 'react-icons/fa';
 
 const Navbar = ({ walletAddress, setIsWalletOpen, isDropdownOpen, setIsDropdownOpen, handleDisconnect }) => {
   const navigate = useNavigate();
@@ -54,7 +54,7 @@ const Navbar = ({ walletAddress, setIsWalletOpen, isDropdownOpen, setIsDropdownO
         {/* Navigation Links - Now visible on all screen sizes */}
         <div className="flex items-center space-x-6">
           <NavLink text="Home" onClick={() => navigate('/')} />
-          <NavLink text="Trade" highlight={true} />
+          <NavLink text="Trade" onClick={() => navigate('/trade')} highlight={true} />
           <NavLink text="Market" onClick={() => navigate('/market')} />
           <NavLink text="Developers" onClick={() => navigate('/developers')} />
           <NavLink text="About" onClick={() => navigate('/about')} />

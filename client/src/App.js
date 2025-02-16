@@ -9,16 +9,20 @@ import Developers from './components/Developers';
 import Wallet from './components/Wallet';
 import About from './components/About'
 import Market from './components/Market';
+import Trade from './components/Trade';
 import './App.css';
 
 function App() {
   const [walletAddress, setWalletAddress] = useState('');
   const [isWalletOpen, setIsWalletOpen] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isDropdownNavbarOpen, setIsDropdownNavbarOpen] = useState(false);
+  const [isDropdownTradeFromOpen, setIsDropdownTradeFromOpen] = useState(false);
+  const [isDropdownTradeToOpen, setIsDropdownTradeToOpen] = useState(false);
 
   const handleDisconnect = () => {
     setWalletAddress('');
-    setIsDropdownOpen(false);
+    setIsDropdownNavbarOpen(false);
+    setIsDropdownTradeFromOpen(false);
   };
 
   return (
@@ -27,8 +31,8 @@ function App() {
         <Navbar 
           walletAddress={walletAddress} 
           setIsWalletOpen={setIsWalletOpen}
-          isDropdownOpen={isDropdownOpen}
-          setIsDropdownOpen={setIsDropdownOpen}
+          isDropdownOpen={isDropdownNavbarOpen}
+          setIsDropdownOpen={setIsDropdownNavbarOpen}
           handleDisconnect={handleDisconnect}
         />
         
@@ -49,8 +53,15 @@ function App() {
           } />
           <Route path="/404" element={<NotFound />} />
           <Route path="/developers" element={<Developers />} />
-	  <Route path="/about" element={<About />} />
+	        <Route path="/about" element={<About />} />
           <Route path="/market" element={<Market />} />
+          <Route path="/trade" element={
+            <Trade 
+              isDropdownTradeFromOpen={isDropdownTradeFromOpen}
+              setIsDropdownOpen={setIsDropdownTradeFromOpen}
+              isDropdownTradeToOpen={isDropdownTradeToOpen}
+              setIsDropdownTradeToOpen={setIsDropdownTradeToOpen}
+            />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
 
