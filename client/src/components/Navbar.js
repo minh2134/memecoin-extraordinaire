@@ -1,7 +1,8 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import memelogo from '../assets/memecoin.png';
-import { FaWallet, FaArrowDown } from 'react-icons/fa';
+import memesmalllogo from '../assets/memecoin-logo.png';
+import { FaWallet, FaArrowDown, FaBars } from 'react-icons/fa';
 
 const Navbar = ({ walletAddress, setIsWalletOpen, isDropdownOpen, setIsDropdownOpen, handleDisconnect }) => {
   const navigate = useNavigate();
@@ -17,7 +18,7 @@ const Navbar = ({ walletAddress, setIsWalletOpen, isDropdownOpen, setIsDropdownO
       } transition-colors`}
     >
       {highlight ? (
-        <span className="text-[#FFE600] group-hover:text-white group-hover:border-[#FFE600] transition-all duration-300">
+        <span className="text-[#FFE600] border-b-2 border-white group-hover:text-white group-hover:border-[#FFE600] transition-all duration-300">
           {text}
         </span>
       ) : (
@@ -32,16 +33,26 @@ const Navbar = ({ walletAddress, setIsWalletOpen, isDropdownOpen, setIsDropdownO
   return (
     <nav className="bg-gradient-to-r from-[#0B041A] to-[#361480] px-6 py-0 shadow-lg">
       <div className="container mx-auto flex items-center justify-between">
+        {/* Logo section */}
         <div className="flex items-center">
+          {/* Large logo - visible only on large screens */}
           <img 
             src={memelogo} 
             alt="Memecoin Logo" 
-            className="h-[120px] w-auto cursor-pointer hover:scale-105 transition-transform duration-300" 
+            className="h-[120px] w-auto cursor-pointer hover:scale-105 transition-transform duration-300 hidden lg:block" 
+            onClick={() => navigate('/')}
+          />
+          {/* Small logo - visible only on medium screens */}
+          <img 
+            src={memesmalllogo} 
+            alt="Memecoin Logo" 
+            className="h-20 w-auto cursor-pointer hover:scale-105 transition-transform duration-300 hidden md:block lg:hidden" 
             onClick={() => navigate('/')}
           />
         </div>
         
-        <div className="hidden md:flex items-center space-x-10">
+        {/* Navigation Links - Now visible on all screen sizes */}
+        <div className="flex items-center space-x-6">
           <NavLink text="Home" onClick={() => navigate('/')} />
           <NavLink text="Trade" highlight={true} />
           <NavLink text="Market" onClick={() => navigate('/market')} />
@@ -54,8 +65,8 @@ const Navbar = ({ walletAddress, setIsWalletOpen, isDropdownOpen, setIsDropdownO
                 className={buttonClasses}
                 onClick={() => setIsWalletOpen(true)}
               >
-                <span>Link Wallet</span>
-                <FaWallet className="ml-2 animate-pulse" />
+                <span className="hidden sm:inline">Link Wallet</span>
+                <FaWallet className="ml-2" />
               </button>
             ) : (
               <div>
@@ -64,7 +75,7 @@ const Navbar = ({ walletAddress, setIsWalletOpen, isDropdownOpen, setIsDropdownO
                   onClick={() => setIsDropdownOpen(true)}
                 >
                   <FaArrowDown className="mr-2" />
-                  <span>{walletAddress}</span>
+                  <span className="hidden sm:inline">{walletAddress}</span>
                   <FaWallet className="ml-2" />
                 </button>
                 {isDropdownOpen && (
