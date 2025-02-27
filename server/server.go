@@ -15,8 +15,8 @@ import (
 
 func main() {
 	http.HandleFunc("/", handler)
-	http.HandleFunc("/swap", swapHandler)
-	http.HandleFunc("/limit", limitHandler)
+	http.HandleFunc("/trade/swap", swapHandler)
+	http.HandleFunc("/trade/limit", limitHandler)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
