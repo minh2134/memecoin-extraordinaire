@@ -3,6 +3,12 @@
 
 *server* is for a go backend server, assignment 2. Currently extremely barebone and unusable.
 
+# External build dependencies
+You will need to have:
+- gcc
+- go
+- yarn
+
 # Start the backend
 ```
 cd server
