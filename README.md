@@ -8,6 +8,7 @@ You will need to have:
 - gcc
 - go
 - yarn
+- sqlite
 
 # Start the backend
 ```
