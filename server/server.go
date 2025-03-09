@@ -14,17 +14,28 @@ import (
 // TODO: limit wrong url (default to a notfound response)
 // TODO: resolves on how to take input for swap and limit order and what to return
 
-// TODO: define a global pointer variable here for the DB
+// global database pointer to pass around in the handler
 var db *sql.DB
 
 func main() {
 	var err error
+
+	// establishing DB availablity
 	db, err = database.Open()
 
-	if (err != nil) { log.Fatal("Opening database failed.") }
-	log.Println("Connection to database successful.")
-
+	if (err != nil) { 
+		log.Fatal("Opening database failed.") 
+	}
+	log.Println("Opened the database successfully.")
 	defer db.Close()
+
+	err = db.Ping()
+	if err != nil {
+		log.Fatal("Establishing a connection failed.")
+	}
+	log.Println("Connected to the database successfully.")
+	
+	err = database.Bootstrap(db)
 
 	// Router
 	http.HandleFunc("/", handler)
@@ -40,7 +51,15 @@ func handler (w http.ResponseWriter, r *http.Request) {
 }
 
 func swapHandler (w http.ResponseWriter, r *http.Request) {
-	swap.Swap(db)
+	// TODO: create a valid SwapRequest from request body
+	testSwapReq := swap.SwapRequest {
+		SourceCurr: 	"PEPE",
+		TargetCurr: 	"BTC",
+		Amount: 	14.99,
+		SourceAddress: 	"sdasdaw",
+	}
+
+	swap.Swap(db, testSwapReq)
 }
 
 func limitHandler (w http.ResponseWriter, r *http.Request) {
