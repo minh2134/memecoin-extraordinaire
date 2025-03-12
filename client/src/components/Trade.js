@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import tradeIcon from '../assets/trade-icon.png'
+import { getSimpleTokenList } from '../utils/cryptoData';
 
 const Trade = ({ 
   isDropdownTradeFromOpen, 
@@ -15,13 +16,7 @@ const Trade = ({
   const [isLoading, setIsLoading] = useState(false);
   const [transactionStatus, setTransactionStatus] = useState(null); // 'success' or 'failed'
   
-  const tokens = [
-    { name: 'Bitcoin', symbol: 'BTC' },
-    { name: 'Dogecoin', symbol: 'DOGE' },
-    { name: 'Shiba Inu', symbol: 'SHIB' },
-    { name: 'Pepe', symbol: 'PEPE' },
-    { name: 'Bonk', symbol: 'BONK' }
-  ];
+  const tokens = getSimpleTokenList();
 
   const buttonClasses = `font-heading px-6 py-3 w-full rounded-[30px] bg-gradient-to-r 
     ${(!fromAmount || !toAmount) 

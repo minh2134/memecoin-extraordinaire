@@ -11,6 +11,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import { cryptoList, getAllCoinIds } from '../utils/cryptoData';
 
 ChartJS.register(
   CategoryScale,
@@ -21,39 +22,6 @@ ChartJS.register(
   Tooltip,
   Legend
 );
-
-const cryptoList = [
-  { 
-    id: 'bitcoin', 
-    symbol: 'BTC', 
-    name: 'Bitcoin', 
-    nicknames: ['btc', 'bitcoin', 'digital gold', 'crypto king']
-  },
-  { 
-    id: 'dogecoin', 
-    symbol: 'DOGE', 
-    name: 'Dogecoin', 
-    nicknames: ['doge', 'dogecoin', 'much wow']
-  },
-  { 
-    id: 'shiba-inu', 
-    symbol: 'SHIB', 
-    name: 'Shiba Inu', 
-    nicknames: ['shib', 'shiba', 'doge killer']
-  },
-  { 
-    id: 'bonk', 
-    symbol: 'BONK', 
-    name: 'Bonk', 
-    nicknames: ['bonk', 'solana dog']
-  },
-  { 
-    id: 'pepe', 
-    symbol: 'PEPE', 
-    name: 'Pepe', 
-    nicknames: ['pepe', 'frog coin']
-  },
-];
 
 const formatPrice = (price) => {
   if (price === 0) return '$0.00';
@@ -82,7 +50,7 @@ const Market = () => {
   const fetchCryptoData = async () => {
     try {
       const response = await fetch(
-        `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${cryptoList.map(c => c.id).join(',')}&order=market_cap_desc&sparkline=false&price_change_percentage=1h,24h`
+        `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${getAllCoinIds().join(',')}&order=market_cap_desc&sparkline=false&price_change_percentage=1h,24h`
       );
       const data = await response.json();
       setCryptoData(data);
