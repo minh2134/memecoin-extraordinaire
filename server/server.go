@@ -54,10 +54,8 @@ func handler (w http.ResponseWriter, r *http.Request) {
 func swapHandler (w http.ResponseWriter, r *http.Request) {
 	// TODO: create a valid SwapRequest from request body
 	var swapRequest swap.SwapRequest
-	log.Println(r.Method)
 	switch r.Method {
 		case "POST":
-			log.Println("start the POST handling")
 			// Expecting a JSON
 			dec := json.NewDecoder(r.Body)
 			dec.DisallowUnknownFields()
