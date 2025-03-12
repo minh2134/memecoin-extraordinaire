@@ -29,7 +29,7 @@ var (
 var needBootstrap = false
 
 func Open() (*sql.DB, error) {
-	if _, err := os.Stat(dbFile); err == nil {
+	if _, err := os.Stat(dbFile); err != nil {
 		needBootstrap = true
 	}
 
@@ -45,6 +45,7 @@ func Open() (*sql.DB, error) {
 func Bootstrap(d *sql.DB) error {
 	if !needBootstrap {
 		log.Println("dbFile already exists. Skipping the bootstrapping...")
+		return nil
 	}
 	needBootstrap = false
 	log.Println("dbFile not found. Bootstrapping...")
