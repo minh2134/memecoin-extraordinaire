@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"encoding/json"
 
 	// internal server packages
 	"server/internal/database"
@@ -52,14 +53,43 @@ func handler (w http.ResponseWriter, r *http.Request) {
 
 func swapHandler (w http.ResponseWriter, r *http.Request) {
 	// TODO: create a valid SwapRequest from request body
+	var swapRequest swap.SwapRequest
+	log.Println(r.Method)
+	switch r.Method {
+		case "POST":
+			log.Println("start the POST handling")
+			// Expecting a JSON
+			dec := json.NewDecoder(r.Body)
+			dec.DisallowUnknownFields()
+			err := dec.Decode(&swapRequest)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				log.Println("Bad request")
+				return
+			}
+
+			err = swap.Swap(db, swapRequest)
+			if err != nil {
+				log.Println(err)
+				w.WriteHeader(http.StatusNotFound)
+			}
+
+			return
+	}
+
+	log.Println("You should not have reached here")
+	/*
+	// test in case mysterious stuff appears
 	testSwapReq := swap.SwapRequest {
 		SourceCurr: 	"PEPE",
 		TargetCurr: 	"BTC",
-		Amount: 	14.99,
+		SourceAmount: 	1499,
+		TargetAmount: 	2599,
 		SourceAddress: 	"sdasdaw",
 	}
 
 	swap.Swap(db, testSwapReq)
+	*/
 }
 
 func limitHandler (w http.ResponseWriter, r *http.Request) {

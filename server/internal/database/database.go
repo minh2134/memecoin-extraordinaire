@@ -62,7 +62,8 @@ func Bootstrap(d *sql.DB) error {
 	CREATE TABLE IF NOT EXISTS limitOrders (
 		id 		INTEGER PRIMARY KEY,
 		sourceAddress	TEXT NOT NULL,
-		amount		REAL NOT NULL,
+		sourceAmount	INT NOT NULL,
+		targetAmount	INT NOT NULL,
 		fromCurrency	TEXT NOT NULL,
 		toCurrency	TEXT NOT NULL,
 		FOREIGN KEY(fromCurrency) REFERENCES currencies(name),
@@ -76,8 +77,8 @@ func Bootstrap(d *sql.DB) error {
 		('PEPE', 'Pepe'),
 		('BONK', 'Bonk');
 	
-	INSERT INTO limitOrders (sourceAddress, amount, fromCurrency, toCurrency) VALUES
-		('xsasdaw231', 25.99, 'BTC', 'PEPE');
+	INSERT INTO limitOrders (sourceAddress, sourceAmount, targetAmount, fromCurrency, toCurrency) VALUES
+		('xsasdaw231', 2599, 1499, 'BTC', 'PEPE');
 	`
 
 	_, err := d.Exec(schema)

@@ -14,7 +14,8 @@ import (
 type SwapRequest struct {
 	SourceCurr 	string
 	TargetCurr 	string
-	Amount		float64
+	SourceAmount	int
+	TargetAmount	int
 	SourceAddress	string
 }
 
@@ -22,31 +23,59 @@ type SwapRequest struct {
 type limitRow struct {
 	id 		int 
 	sourceAddress 	string
-	amount		float64
+	sourceAmount 	int
+	targetAmount	int
 	fromCurr	string
 	toCurr		string
 }
 
-func Swap(db *sql.DB, sr SwapRequest) {
-	validSwap := db.QueryRow("SELECT * FROM limitOrders WHERE toCurrency = ?", sr.SourceCurr)
-	log.Println("swap query successful")
+func Swap(db *sql.DB, sr SwapRequest) error {
+	query := `
+		SELECT * FROM limitOrders WHERE 
+			fromCurrency = ? AND 
+			toCurrency = ? AND
+			targetAmount <= ? AND
+			sourceAmount/CAST(targetAmount AS REAL) <= ? AND
+			sourceAmount/CAST(targetAmount AS REAL) >= ?;
+
+	`
+	var (
+		rate float64 = float64(sr.TargetAmount)/float64(sr.SourceAmount)
+		minrate float64 = rate * (0.95)
+		maxrate float64 = rate * (1.05)
+	)
+
+	validSwap := db.QueryRow(query, 
+				sr.TargetCurr,
+				sr.SourceCurr,
+				sr.SourceAmount,
+				maxrate,
+				minrate,
+			)
 	
 	var result limitRow;
-	if err := validSwap.Scan(&result.id, &result.sourceAddress, &result.amount, &result.fromCurr, &result.toCurr); err != nil {
+	if err := validSwap.Scan(
+			&result.id, 
+			&result.sourceAddress, 
+			&result.sourceAmount, 
+			&result.targetAmount, 
+			&result.fromCurr, 
+			&result.toCurr,
+		); err != nil {
 		// TODO: needs proper error handling
-		log.Println("not good")
-		log.Println(err)
-		return
+		log.Println("swap.go: Something wrong happened when parsing the resulted row")
+		return err
 	}
-	
+	log.Println("swap.go: swap query successful")
+
 	// TODO: trigger some sort of smart contract here(?) and delete the row
 	log.Println("WARNING: not actually swapped, just simulate the delete for now...")
 	_, err := db.Exec("DELETE FROM limitOrders WHERE id = ?", result.id)
 	if err != nil {
-		log.Println("Swap not successful (updating database failed)")
-		log.Println(err)
+		log.Println("swap.go: Swap not successful (updating database failed)")
+		return err
 	}
 
 	log.Println("swap successfully")
-	log.Println(result.sourceAddress)
+	return nil
 }
