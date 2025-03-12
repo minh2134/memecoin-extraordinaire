@@ -68,12 +68,12 @@ func swapHandler (w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			err = swap.Swap(db, swapRequest)
+			result, err := swap.Swap(db, swapRequest)
 			if err != nil {
 				log.Println(err)
 				w.WriteHeader(http.StatusNotFound)
 			}
-
+			json.NewEncoder(w).Encode(result)
 			return
 	}
 

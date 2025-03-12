@@ -19,6 +19,12 @@ type SwapRequest struct {
 	SourceAddress	string
 }
 
+type SwapResult struct {
+	Address 	string
+	TradedAmount	int 
+	ReceivedAmount	int
+}
+
 // struct for holding results from querying limit orders
 type limitRow struct {
 	id 		int 
@@ -29,12 +35,13 @@ type limitRow struct {
 	toCurr		string
 }
 
-func Swap(db *sql.DB, sr SwapRequest) error {
+func Swap(db *sql.DB, sr SwapRequest) (SwapResult, error) {
+	var swapResult SwapResult
 	query := `
 		SELECT * FROM limitOrders WHERE 
 			fromCurrency = ? AND 
 			toCurrency = ? AND
-			targetAmount <= ? AND
+			targetAmount = ? AND
 			sourceAmount/CAST(targetAmount AS REAL) <= ? AND
 			sourceAmount/CAST(targetAmount AS REAL) >= ?;
 
@@ -64,18 +71,22 @@ func Swap(db *sql.DB, sr SwapRequest) error {
 		); err != nil {
 		// TODO: needs proper error handling
 		log.Println("swap.go: Something wrong happened when parsing the resulted row")
-		return err
+		return swapResult, err
 	}
 	log.Println("swap.go: swap query successful")
 
 	// TODO: trigger some sort of smart contract here(?) and delete the row
+
+	swapResult.Address = result.sourceAddress
+	swapResult.TradedAmount = sr.SourceAmount 
+	swapResult.ReceivedAmount = result.sourceAmount
+
 	log.Println("WARNING: not actually swapped, just simulate the delete for now...")
 	_, err := db.Exec("DELETE FROM limitOrders WHERE id = ?", result.id)
 	if err != nil {
 		log.Println("swap.go: Swap not successful (updating database failed)")
-		return err
+		return swapResult, err
 	}
-
-	log.Println("swap successfully")
-	return nil
+		log.Println("swap successfully")
+	return swapResult, nil
 }
