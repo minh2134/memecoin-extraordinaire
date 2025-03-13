@@ -59,6 +59,11 @@ func Bootstrap(d *sql.DB) error {
 		fullName	TEXT
 	);
 
+	CREATE TABLE IF NOT EXISTS status (
+		code		TEXT PRIMARY KEY,
+		desc		TEXT
+	);
+
 	CREATE TABLE IF NOT EXISTS limitOrders (
 		id 		INTEGER PRIMARY KEY,
 		sourceAddress	TEXT NOT NULL,
@@ -66,8 +71,10 @@ func Bootstrap(d *sql.DB) error {
 		targetAmount	REAL NOT NULL,
 		fromCurrency	TEXT NOT NULL,
 		toCurrency	TEXT NOT NULL,
+		status		TEXT NOT NULL,
 		FOREIGN KEY(fromCurrency) REFERENCES currencies(name),
-		FOREIGN KEY(toCurrency) REFERENCES currencies(name)
+		FOREIGN KEY(toCurrency) REFERENCES currencies(name),
+		FOREIGN KEY(status) REFERENCES status(code)
 	);
 
 	INSERT INTO currencies (name, fullName) VALUES 
@@ -76,9 +83,14 @@ func Bootstrap(d *sql.DB) error {
 		('SHIB', 'Shiba Inu'),
 		('PEPE', 'Pepe'),
 		('BONK', 'Bonk');
+
+	INSERT INTO status (code, desc) VALUES
+		('AVAIL', 'Available to trade'),
+		('DONE', 'limit order fulfilled, no longer available'),
+		('EXP', 'limit order expired, no longer available');
 	
-	INSERT INTO limitOrders (sourceAddress, sourceAmount, targetAmount, fromCurrency, toCurrency) VALUES
-		('xsasdaw231', 2599, 1499, 'BTC', 'PEPE');
+	INSERT INTO limitOrders (sourceAddress, sourceAmount, targetAmount, fromCurrency, toCurrency, status) VALUES
+		('xsasdaw231', 2599, 1499, 'BTC', 'PEPE', 'AVAIL');
 	`
 
 	_, err := d.Exec(schema)

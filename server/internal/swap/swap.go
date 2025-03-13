@@ -34,18 +34,27 @@ type limitRow struct {
 	targetAmount	decimal.Decimal
 	fromCurr	string
 	toCurr		string
+	status 		string
 }
 
 func Swap(db *sql.DB, sr SwapRequest) (SwapResult, error) {
+	tx, err := db.Begin()
+
 	var swapResult SwapResult
-	query := `
+	orderMatch := `
 		SELECT * FROM limitOrders WHERE 
 			fromCurrency = ? AND 
 			toCurrency = ? AND
 			targetAmount = ? AND
 			sourceAmount/targetAmount <= ? AND
-			sourceAmount/targetAmount >= ?;
+			sourceAmount/targetAmount >= ? AND
+			status = 'AVAIL';
 
+	`
+	markDone := `
+		UPDATE limitOrders 
+		SET status = 'DONE'
+		WHERE id = ?;
 	`
 	var (
 		rate, _ = sr.TargetAmount.Div(sr.SourceAmount).Float64()
@@ -54,7 +63,7 @@ func Swap(db *sql.DB, sr SwapRequest) (SwapResult, error) {
 		maxrate float64 = rate * (1.05)
 	)
 
-	validSwap := db.QueryRow(query, 
+	validSwap := tx.QueryRow(orderMatch, 
 				sr.TargetCurr,
 				sr.SourceCurr,
 				sr.SourceAmount,
@@ -70,6 +79,7 @@ func Swap(db *sql.DB, sr SwapRequest) (SwapResult, error) {
 			&result.targetAmount, 
 			&result.fromCurr, 
 			&result.toCurr,
+			&result.status,
 		); err != nil {
 		// TODO: needs proper error handling
 		log.Println("swap.go: Something wrong happened when parsing the resulted row")
@@ -77,18 +87,26 @@ func Swap(db *sql.DB, sr SwapRequest) (SwapResult, error) {
 	}
 	log.Println("swap.go: swap query successful")
 
-	// TODO: trigger some sort of smart contract here(?) and delete the row
+	// TODO: trigger some sort of smart contract here(?) and update the row status
 
 	swapResult.Address = result.sourceAddress
 	swapResult.TradedAmount = sr.SourceAmount 
 	swapResult.ReceivedAmount = result.sourceAmount
 
-	log.Println("WARNING: not actually swapped, just simulate the delete for now...")
-	_, err := db.Exec("DELETE FROM limitOrders WHERE id = ?", result.id)
+	log.Println("WARNING: not actually swapped, just simulate the udating status for now...")
+
+	_, err = tx.Exec(markDone, result.id)
 	if err != nil {
 		log.Println("swap.go: Swap not successful (updating database failed)")
+		tx.Rollback()
 		return swapResult, err
 	}
-		log.Println("swap successfully")
+	
+	if err = tx.Commit(); err != nil {
+		log.Println("swap.go: database update failed")
+		return swapResult, err
+	}
+
+	log.Println("swap successfully")
 	return swapResult, nil
 }
