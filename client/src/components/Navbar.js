@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import memelogo from '../assets/memecoin.png';
 import memesmalllogo from '../assets/memecoin-logo.png';
 import { FaWallet, FaArrowDown } from 'react-icons/fa';
@@ -78,25 +78,35 @@ const Navbar = ({ walletAddress, setIsWalletOpen, isDropdownOpen, setIsDropdownO
                   <span className="hidden sm:inline">{walletAddress}</span>
                   <FaWallet className="ml-2" />
                 </button>
-                {isDropdownOpen && (
-                  <div 
-                    className="absolute right-0 mt-2 w-48 bg-[#1E1E1E] border border-mystery-accent/30 rounded-xl shadow-xl backdrop-blur-sm z-10 overflow-hidden"
-                    onMouseLeave={() => setIsDropdownOpen(false)}
-                  >
-                    <ul className="font-heading">
-                      <li 
-                        className="px-4 py-3 text-white hover:bg-mystery-accent/20 cursor-pointer transition-colors duration-200"
-                        onClick={() => navigate('/transactions')}
-                      >
-                        Recent Transactions
-                      </li>
-                      <li 
-                        className="px-4 py-3 text-white hover:bg-mystery-accent/20 cursor-pointer transition-colors duration-200"
-                        onClick={handleDisconnect}
-                      >
-                        Disconnect
-                      </li>
-                    </ul>
+                {isDropdownOpen && walletAddress && (
+                  <div className="absolute right-0 mt-2 w-56 bg-[#1E1E1E] rounded-lg shadow-lg py-1 z-10">
+                    <div className="px-4 py-3 border-b border-gray-700">
+                      <p className="text-sm text-gray-400">Connected Wallet</p>
+                      <p className="text-xs font-mono text-gray-300 truncate">{walletAddress}</p>
+                    </div>
+                    
+                    <Link 
+                      to="/wallet" 
+                      className="block px-4 py-2 text-sm text-white hover:bg-gray-700"
+                      onClick={() => setIsDropdownOpen(false)}
+                    >
+                      Wallet Dashboard
+                    </Link>
+                    
+                    <Link 
+                      to="/transactions" 
+                      className="block px-4 py-2 text-sm text-white hover:bg-gray-700"
+                      onClick={() => setIsDropdownOpen(false)}
+                    >
+                      Recent Transactions
+                    </Link>
+                    
+                    <button
+                      onClick={handleDisconnect}
+                      className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-700"
+                    >
+                      Disconnect
+                    </button>
                   </div>
                 )}
               </div>
