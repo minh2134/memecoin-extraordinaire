@@ -20,6 +20,7 @@ var db *sql.DB
 
 func main() {
 	var err error
+	mux := http.NewServeMux()
 
 	// establishing DB availablity
 	db, err = database.Open()
@@ -39,15 +40,19 @@ func main() {
 	err = database.Bootstrap(db)
 
 	// Router
-	http.HandleFunc("/", handler)
-	http.HandleFunc("/trade/swap", swapHandler)
-	http.HandleFunc("/trade/limit", limitHandler)
+	mux.HandleFunc("/", handler)
+	mux.HandleFunc("/trade/swap", swapHandler)
+	mux.HandleFunc("/trade/limit", limitHandler)
 
 	log.Println("Handling connection at localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":8080", mux))
 }
 
 func handler (w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
 	fmt.Fprint(w, "Hello, World!")
 }
 
