@@ -17,6 +17,11 @@ import (
 // global database pointer to pass around in the handler
 var db *sql.DB
 
+func enableCORS(w *http.ResponseWriter) {
+	// signal to clients this response is allowed for Cross-Origin Resource Sharing
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+}
+
 func main() {
 	var err error
 	mux := http.NewServeMux()
@@ -61,6 +66,7 @@ func swapHandler (w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	enableCORS(&w)
 	var swapRequest swap.SwapRequest
 	// Expecting a JSON
 	dec := json.NewDecoder(r.Body)
@@ -93,5 +99,5 @@ func swapHandler (w http.ResponseWriter, r *http.Request) {
 }
 
 func limitHandler (w http.ResponseWriter, r *http.Request) {
-
+	enableCORS(&w)
 }
