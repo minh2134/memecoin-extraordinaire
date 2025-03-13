@@ -41,7 +41,7 @@ func main() {
 
 	// Router
 	mux.HandleFunc("/", handler)
-	mux.HandleFunc("/trade/swap", swapHandler)
+	mux.HandleFunc("POST /trade/swap", swapHandler)
 	mux.HandleFunc("/trade/limit", limitHandler)
 
 	log.Println("Handling connection at localhost:8080")
@@ -57,30 +57,29 @@ func handler (w http.ResponseWriter, r *http.Request) {
 }
 
 func swapHandler (w http.ResponseWriter, r *http.Request) {
-	// TODO: create a valid SwapRequest from request body
-	var swapRequest swap.SwapRequest
-	switch r.Method {
-		case "POST":
-			// Expecting a JSON
-			dec := json.NewDecoder(r.Body)
-			dec.DisallowUnknownFields()
-			err := dec.Decode(&swapRequest)
-			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				log.Println("Bad request")
-				return
-			}
-
-			result, err := swap.Swap(db, swapRequest)
-			if err != nil {
-				log.Println(err)
-				w.WriteHeader(http.StatusNotFound)
-			}
-			json.NewEncoder(w).Encode(result)
-			return
+	if r.URL.Path != "/trade/swap" {
+		http.NotFound(w, r)
+		return
 	}
 
-	log.Println("You should not have reached here")
+	var swapRequest swap.SwapRequest
+	// Expecting a JSON
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	err := dec.Decode(&swapRequest)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Println("Bad request")
+		return
+	}
+
+	result, err := swap.Swap(db, swapRequest)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusNotFound)
+	}
+	json.NewEncoder(w).Encode(result)
+
 	/*
 	// test in case mysterious stuff appears
 	testSwapReq := swap.SwapRequest {
