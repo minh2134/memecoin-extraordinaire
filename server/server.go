@@ -12,7 +12,6 @@ import (
 	"server/internal/swap"
 )
 
-// TODO: limit wrong url (default to a notfound response)
 // TODO: resolves on how to take input for swap and limit order and what to return
 
 // global database pointer to pass around in the handler
@@ -69,7 +68,6 @@ func swapHandler (w http.ResponseWriter, r *http.Request) {
 	err := dec.Decode(&swapRequest)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		log.Println("Bad request")
 		return
 	}
 

@@ -3,6 +3,7 @@ package swap
 import (
 	"database/sql"
 	"log"
+	"github.com/shopspring/decimal"
 )
 
 // TODO: implement Swap:
@@ -14,23 +15,23 @@ import (
 type SwapRequest struct {
 	SourceCurr 	string
 	TargetCurr 	string
-	SourceAmount	int
-	TargetAmount	int
+	SourceAmount	decimal.Decimal
+	TargetAmount	decimal.Decimal
 	SourceAddress	string
 }
 
 type SwapResult struct {
 	Address 	string
-	TradedAmount	int 
-	ReceivedAmount	int
+	TradedAmount	decimal.Decimal 
+	ReceivedAmount	decimal.Decimal
 }
 
 // struct for holding results from querying limit orders
 type limitRow struct {
 	id 		int 
 	sourceAddress 	string
-	sourceAmount 	int
-	targetAmount	int
+	sourceAmount 	decimal.Decimal
+	targetAmount	decimal.Decimal
 	fromCurr	string
 	toCurr		string
 }
@@ -42,12 +43,13 @@ func Swap(db *sql.DB, sr SwapRequest) (SwapResult, error) {
 			fromCurrency = ? AND 
 			toCurrency = ? AND
 			targetAmount = ? AND
-			sourceAmount/CAST(targetAmount AS REAL) <= ? AND
-			sourceAmount/CAST(targetAmount AS REAL) >= ?;
+			sourceAmount/targetAmount <= ? AND
+			sourceAmount/targetAmount >= ?;
 
 	`
 	var (
-		rate float64 = float64(sr.TargetAmount)/float64(sr.SourceAmount)
+		rate, _ = sr.TargetAmount.Div(sr.SourceAmount).Float64()
+		
 		minrate float64 = rate * (0.95)
 		maxrate float64 = rate * (1.05)
 	)

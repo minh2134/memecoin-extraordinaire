@@ -62,8 +62,8 @@ func Bootstrap(d *sql.DB) error {
 	CREATE TABLE IF NOT EXISTS limitOrders (
 		id 		INTEGER PRIMARY KEY,
 		sourceAddress	TEXT NOT NULL,
-		sourceAmount	INT NOT NULL,
-		targetAmount	INT NOT NULL,
+		sourceAmount	REAL NOT NULL,
+		targetAmount	REAL NOT NULL,
 		fromCurrency	TEXT NOT NULL,
 		toCurrency	TEXT NOT NULL,
 		FOREIGN KEY(fromCurrency) REFERENCES currencies(name),
