@@ -2,14 +2,15 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-	"encoding/json"
 
 	// internal server packages
 	"server/internal/database"
 	"server/internal/swap"
+
 )
 
 // TODO: resolves on how to take input for swap and limit order and what to return
@@ -83,15 +84,18 @@ func swapHandler (w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return 
 	}
-	json.NewEncoder(w).Encode(result)
-
+	
+	err = json.NewEncoder(w).Encode(result)
+	if err != nil {
+		log.Println(err)
+	}
 	/*
 	// test in case mysterious stuff appears
 	testSwapReq := swap.SwapRequest {
 		SourceCurr: 	"PEPE",
 		TargetCurr: 	"BTC",
 		SourceAmount: 	1499,
-		TargetAmount: 	2599,
+		Rate:		0.58823529411
 		SourceAddress: 	"sdasdaw",
 	}
 

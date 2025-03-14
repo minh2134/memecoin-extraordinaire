@@ -11,6 +11,7 @@ import (
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/shopspring/decimal"
 )
 
 var dbType = "sqlite3"
@@ -27,6 +28,16 @@ var (
 )
 
 var needBootstrap = false
+
+type TransactionRow struct {
+	Id 		int
+	SourceAddress	string
+	TargetAddress 	string
+	SourceCurr 	string
+	TargetCurr 	string
+	SourceAmount 	decimal.Decimal
+	TargetAmount 	decimal.Decimal
+}
 
 func Open() (*sql.DB, error) {
 	if _, err := os.Stat(dbFile); err != nil {
@@ -59,22 +70,27 @@ func Bootstrap(d *sql.DB) error {
 		fullName	TEXT
 	);
 
-	CREATE TABLE IF NOT EXISTS status (
-		code		TEXT PRIMARY KEY,
-		desc		TEXT
-	);
-
 	CREATE TABLE IF NOT EXISTS limitOrders (
 		id 		INTEGER PRIMARY KEY,
 		sourceAddress	TEXT NOT NULL,
 		sourceAmount	REAL NOT NULL,
-		targetAmount	REAL NOT NULL,
+		rate		REAL NOT NULL,
 		fromCurrency	TEXT NOT NULL,
 		toCurrency	TEXT NOT NULL,
-		status		TEXT NOT NULL,
 		FOREIGN KEY(fromCurrency) REFERENCES currencies(name),
-		FOREIGN KEY(toCurrency) REFERENCES currencies(name),
-		FOREIGN KEY(status) REFERENCES status(code)
+		FOREIGN KEY(toCurrency) REFERENCES currencies(name)
+	);
+
+	CREATE TABLE IF NOT EXISTS transactions (
+		id 		INTEGER PRIMARY KEY,
+		sourceAddress 	TEXT NOT NULL,
+		targetAddress	TEXT NOT NULL,
+		sourceCurr	TEXT NOT NULL,
+		targetCurr	TEXT NOT NULL,
+		sourceAmount 	REAL NOT NULL,
+		targetAmount	REAL NOT NULL,
+		FOREIGN KEY(sourceCurr) REFERENCES currencies(name),
+		FOREIGN KEY(targetCurr) REFERENCES currencies(name)
 	);
 
 	INSERT INTO currencies (name, fullName) VALUES 
@@ -84,13 +100,8 @@ func Bootstrap(d *sql.DB) error {
 		('PEPE', 'Pepe'),
 		('BONK', 'Bonk');
 
-	INSERT INTO status (code, desc) VALUES
-		('AVAIL', 'Available to trade'),
-		('DONE', 'limit order fulfilled, no longer available'),
-		('EXP', 'limit order expired, no longer available');
-	
-	INSERT INTO limitOrders (sourceAddress, sourceAmount, targetAmount, fromCurrency, toCurrency, status) VALUES
-		('xsasdaw231', 2599, 1499, 'BTC', 'PEPE', 'AVAIL');
+	INSERT INTO limitOrders (sourceAddress, sourceAmount, rate, fromCurrency, toCurrency) VALUES
+		('xsasdaw231', 2599, 1.7, 'BTC', 'PEPE');
 	`
 
 	_, err := d.Exec(schema)
