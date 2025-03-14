@@ -97,7 +97,7 @@ func Swap(db *sql.DB, sr SwapRequest) (SwapResult, error) {
 	var (
 		transaction database.TransactionRow
 		limitTargetAmount decimal.Decimal = result.SourceAmount.Mul(result.Rate)
-		swapTargetAmount decimal.Decimal = sr.SourceAmount.Mul(sr.Rate)
+		swapTargetAmount decimal.Decimal = sr.SourceAmount.Mul(result.Rate.Pow(decimal.NewFromInt(-1)))
 	)
 
 	if decimal.Min(sr.SourceAmount, limitTargetAmount) == limitTargetAmount { // limit order lower
