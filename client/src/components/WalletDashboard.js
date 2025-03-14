@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useWallet } from '../contexts/WalletContext';
 import { BsFillWalletFill, BsCurrencyExchange, BsPlusCircle } from 'react-icons/bs';
+import web3Service from '../utils/web3Service';
 
 const WalletDashboard = () => {
   const { wallet, balances, loading, error, createWallet, addFunds, refreshBalances, hasWallet } = useWallet();

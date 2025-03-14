@@ -8,7 +8,7 @@ import trust from '../assets/wallets/trust.png';
 import zengo from '../assets/wallets/zengo.png';
 import qrCode from '../assets/qr-code.png';
 import { BsFillWalletFill, BsCurrencyExchange, BsPlusCircle } from 'react-icons/bs';
-import web3Service from '../services/web3Service';
+import web3Service from '../utils/web3Service';
 
 const wallets = [
   { name: 'Binance', icon: binance },
