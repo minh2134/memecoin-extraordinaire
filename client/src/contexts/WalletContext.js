@@ -1,110 +1,134 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { createWallet, getBalance, addFunds } from '../services/walletService';
+import web3Service from '../utils/web3Service';
 
-// Create context
 const WalletContext = createContext();
 
-// Hook for using the wallet context
-export const useWallet = () => useContext(WalletContext);
+export function useWallet() {
+  return useContext(WalletContext);
+}
 
-// Wallet provider component
-export const WalletProvider = ({ children }) => {
+export function WalletProvider({ children }) {
   const [wallet, setWallet] = useState(null);
   const [balances, setBalances] = useState({});
+  const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  const currencies = ["MEME", "ETH", "BTC", "USDT"];
 
-  // Initialize wallet from localStorage on component mount
-  useEffect(() => {
-    const storedWallet = localStorage.getItem('wallet');
-    if (storedWallet) {
-      const parsedWallet = JSON.parse(storedWallet);
-      setWallet(parsedWallet);
-      
-      // Fetch current balances
-      fetchBalances(parsedWallet.address);
-    }
-  }, []);
+  // Check if wallet exists
+  const hasWallet = !!wallet;
 
-  // Fetch wallet balances
-  const fetchBalances = async (address) => {
-    if (!address) return;
-    
+  async function createWallet() {
     setLoading(true);
     setError(null);
     
     try {
-      const response = await getBalance(address);
-      setBalances(response.balances || {});
-    } catch (err) {
-      setError('Failed to fetch balances');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Create a new wallet
-  const createNewWallet = async (name = "Default User") => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const newWallet = await createWallet(name);
+      const newWallet = await web3Service.createMockWallet();
       setWallet(newWallet);
-      
-      // Store wallet in localStorage
-      localStorage.setItem('wallet', JSON.stringify(newWallet));
-      
-      // Initialize with empty balances
-      setBalances({});
-      
+      await refreshBalances(newWallet.address);
       return newWallet;
     } catch (err) {
-      setError('Failed to create wallet');
-      console.error(err);
+      setError('Failed to create wallet: ' + err.message);
       throw err;
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  // Add funds to wallet (for testing)
-  const addFundsToWallet = async (currency, amount) => {
-    if (!wallet || !wallet.address) {
-      setError('No wallet found');
-      return;
-    }
-    
+  async function connectWallet() {
     setLoading(true);
     setError(null);
     
     try {
-      await addFunds(wallet.address, currency, amount);
-      
-      // Update balances after adding funds
-      await fetchBalances(wallet.address);
-      
-      return true;
+      const address = await web3Service.connectWallet();
+      setWallet({ address });
+      await refreshBalances(address);
+      return address;
     } catch (err) {
-      setError('Failed to add funds');
-      console.error(err);
+      setError('Failed to connect wallet: ' + err.message);
       throw err;
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  // Context value
+  async function refreshBalances(address = null) {
+    if (!address && !wallet) return;
+    
+    setLoading(true);
+    const walletAddress = address || wallet.address;
+    
+    try {
+      const newBalances = {};
+      for (const currency of currencies) {
+        const balance = await web3Service.getBalance(walletAddress, currency);
+        newBalances[currency] = balance;
+      }
+      setBalances(newBalances);
+    } catch (err) {
+      setError('Failed to refresh balances: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function addFunds(currency, amount) {
+    if (!wallet) throw new Error('No wallet connected');
+    
+    setLoading(true);
+    try {
+      await web3Service.mintTokens(wallet.address, currency, amount);
+      await refreshBalances();
+    } catch (err) {
+      setError('Failed to add funds: ' + err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function executeTrade(targetAddress, sourceCurr, targetCurr, sourceAmount, targetAmount) {
+    if (!wallet) throw new Error('No wallet connected');
+    
+    setLoading(true);
+    try {
+      const transaction = await web3Service.executeTrade(
+        targetAddress,
+        sourceCurr,
+        targetCurr,
+        sourceAmount,
+        targetAmount
+      );
+      
+      // Add transaction to list
+      setTransactions(prev => [transaction, ...prev]);
+      
+      // Refresh balances after trade
+      await refreshBalances();
+      
+      return transaction;
+    } catch (err) {
+      setError('Trade execution failed: ' + err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const value = {
     wallet,
     balances,
+    transactions,
     loading,
     error,
-    createWallet: createNewWallet,
-    addFunds: addFundsToWallet,
-    refreshBalances: () => wallet && fetchBalances(wallet.address),
-    hasWallet: !!wallet,
+    hasWallet,
+    currencies,
+    createWallet,
+    connectWallet,
+    refreshBalances,
+    addFunds,
+    executeTrade
   };
 
   return (
@@ -112,4 +136,4 @@ export const WalletProvider = ({ children }) => {
       {children}
     </WalletContext.Provider>
   );
-}; 
+} 

@@ -8,6 +8,7 @@ import trust from '../assets/wallets/trust.png';
 import zengo from '../assets/wallets/zengo.png';
 import qrCode from '../assets/qr-code.png';
 import { BsFillWalletFill, BsCurrencyExchange, BsPlusCircle } from 'react-icons/bs';
+import web3Service from '../services/web3Service';
 
 const wallets = [
   { name: 'Binance', icon: binance },
@@ -35,8 +36,26 @@ const Wallet = ({ isOpen, onClose, setWalletAddress }) => {
   
   if (!isOpen) return null;
 
-  const handleWalletClick = (walletName) => {
+  const handleWalletClick = async (walletName) => {
     setSelectedWallet(walletName);
+    
+    // Only attempt to connect if MetaMask is selected
+    if (walletName === 'MetaMask') {
+      try {
+        // Initialize and connect using web3Service
+        await web3Service.initialize();
+        const address = await web3Service.connectWallet();
+        
+        if (address) {
+          setWalletAddress(address);
+          setSelectedOption('dashboard');
+          onClose();
+        }
+      } catch (error) {
+        console.error('Failed to connect wallet:', error);
+        alert('Failed to connect to MetaMask. Please make sure it is installed and unlocked.');
+      }
+    }
   };
 
   const handleModalClick = (e) => {
@@ -46,8 +65,20 @@ const Wallet = ({ isOpen, onClose, setWalletAddress }) => {
     }
   };
 
-  const handleQRCodeClick = () => {
-    if (selectedWallet) {
+  const handleQRCodeClick = async () => {
+    if (selectedWallet === 'MetaMask') {
+      try {
+        const address = await web3Service.connectWallet();
+        if (address) {
+          setWalletAddress(address);
+          onClose();
+        }
+      } catch (error) {
+        console.error('Failed to connect wallet:', error);
+        alert('Failed to connect to MetaMask. Please make sure it is installed and unlocked.');
+      }
+    } else if (selectedWallet) {
+      // For other wallets, keep the existing mock behavior or implement similarly
       setWalletAddress('0x...BAa8');
       onClose();
       setSelectedWallet(null);
@@ -103,29 +134,6 @@ const Wallet = ({ isOpen, onClose, setWalletAddress }) => {
       <div className="bg-[#1E1E1E] rounded-2xl p-8 max-w-4xl w-full mx-4">
         <h2 className="font-heading text-3xl text-white mb-4">Wallet Connect</h2>
         
-        {/* Option tabs */}
-        <div className="flex mb-8 border-b border-gray-700">
-          <button 
-            className={`px-4 py-2 font-heading ${selectedOption === 'external' ? 'text-mystery-accent border-b-2 border-mystery-accent' : 'text-gray-400'}`}
-            onClick={() => setSelectedOption('external')}
-          >
-            External Wallet
-          </button>
-          <button 
-            className={`px-4 py-2 font-heading ${selectedOption === 'builtin' ? 'text-mystery-accent border-b-2 border-mystery-accent' : 'text-gray-400'}`}
-            onClick={() => setSelectedOption('builtin')}
-          >
-            Built-in Wallet
-          </button>
-          {hasWallet && (
-            <button 
-              className={`px-4 py-2 font-heading ${selectedOption === 'dashboard' ? 'text-mystery-accent border-b-2 border-mystery-accent' : 'text-gray-400'}`}
-              onClick={() => setSelectedOption('dashboard')}
-            >
-              Wallet Dashboard
-            </button>
-          )}
-        </div>
         
         {/* External Wallet Option */}
         {selectedOption === 'external' && (

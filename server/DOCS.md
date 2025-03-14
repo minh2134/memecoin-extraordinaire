@@ -36,3 +36,23 @@ If the status is `200` the body response JSON has this schema:
 }
 ```
 for `*Amount` keys the string should (and expected) be a valid real number
+
+Smart Contract Implementation with Mock Wallet using Ganache
+1.	Compile and Deploy the Trading Contract:
+•	Install Truffle: npm install -g truffle
+•	Initiate the contract: truffle init
+•	Compile the contract: truffle compile
+•	Make sure Ganache is running on port 7545
+•	Deploy the contract: truffle migrate
+2.	Install Required Dependencies:
+•	npm install --save web3
+3.	Create the contract JSON file:
+•	After compilation, copy the Trading.json file from the build/contracts directory to client/src/contracts/
+4.	Set Up the Database Schema:
+•	The transactions will follow your specified format
+•	The smart contract events will emit the data in this format which can be stored in your database
+This implementation will allow you to:
+1.	Create mock wallets without connecting to external wallets
+2.	Trade between addresses within Ganache
+3.	Store transactions in the specified format
+4.	Test the entire flow without requiring real cryptocurrencies
