@@ -3,9 +3,18 @@ import { useNavigate, Link } from 'react-router-dom';
 import memelogo from '../assets/memecoin.png';
 import memesmalllogo from '../assets/memecoin-logo.png';
 import { FaWallet, FaArrowDown } from 'react-icons/fa';
+import { useWallet } from '../contexts/WalletContext';
 
-const Navbar = ({ walletAddress, setIsWalletOpen, isDropdownOpen, setIsDropdownOpen, handleDisconnect }) => {
+const Navbar = ({ isDropdownOpen, setIsDropdownOpen, handleDisconnect, setIsWalletOpen }) => {
   const navigate = useNavigate();
+  const { wallet, balance } = useWallet();
+
+  // Function to shorten wallet address
+  const shortenAddress = (address) => {
+    if (!address) return '';
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
+
   const buttonClasses = "font-heading px-6 py-2 rounded-full bg-gradient-to-r from-[#503BEE] to-[#8A2BE2] hover:from-[#8A2BE2] hover:to-[#503BEE] text-white transition-all duration-300 shadow-lg hover:shadow-mystery-accent/50 flex items-center";
 
   const NavLink = ({ text, onClick, highlight }) => (
@@ -60,13 +69,13 @@ const Navbar = ({ walletAddress, setIsWalletOpen, isDropdownOpen, setIsDropdownO
           <NavLink text="About" onClick={() => navigate('/about')} />
         
           <div className="relative ml-4">
-            {!walletAddress ? (
+            {!wallet ? (
               <button 
                 className={buttonClasses}
                 onClick={() => setIsWalletOpen(true)}
               >
+                <FaWallet className="mr-2" />
                 <span className="hidden sm:inline">Link Wallet</span>
-                <FaWallet className="ml-2" />
               </button>
             ) : (
               <div>
@@ -75,23 +84,15 @@ const Navbar = ({ walletAddress, setIsWalletOpen, isDropdownOpen, setIsDropdownO
                   onClick={() => setIsDropdownOpen(true)}
                 >
                   <FaArrowDown className="mr-2" />
-                  <span className="hidden sm:inline">{walletAddress}</span>
-                  <FaWallet className="ml-2" />
+                  <span className="hidden sm:inline">{shortenAddress(wallet)}</span>
+                  <span className="ml-2">{Number(balance).toFixed(4)} ETH</span>
                 </button>
-                {isDropdownOpen && walletAddress && (
+                {isDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-56 bg-[#1E1E1E] rounded-lg shadow-lg py-1 z-10">
                     <div className="px-4 py-3 border-b border-gray-700">
                       <p className="text-sm text-gray-400">Connected Wallet</p>
-                      <p className="text-xs font-mono text-gray-300 truncate">{walletAddress}</p>
+                      <p className="text-xs font-mono text-gray-300 truncate">{wallet}</p>
                     </div>
-                    
-                    <Link 
-                      to="/wallet" 
-                      className="block px-4 py-2 text-sm text-white hover:bg-gray-700"
-                      onClick={() => setIsDropdownOpen(false)}
-                    >
-                      Wallet Dashboard
-                    </Link>
                     
                     <Link 
                       to="/transactions" 

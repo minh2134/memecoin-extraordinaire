@@ -10,36 +10,13 @@ class Web3Service {
   }
 
   async initialize() {
-    // Check if we should use the injected provider (like MetaMask) or connect directly to Ganache
-    if (window.ethereum) {
-      // Use MetaMask if available
-      this.web3 = new Web3(window.ethereum);
-    } else {
-      // Connect directly to Ganache
-      this.web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:7545'));
-    }
-
     try {
-      // Get the network ID
-      const networkId = await this.web3.eth.net.getId();
-      
-      // This would come from the Trading.json file after compilation
-      const deployedNetwork = TradingContractABI.networks[networkId];
-      
-      if (deployedNetwork) {
-        this.contract = new this.web3.eth.Contract(
-          TradingContractABI.abi,
-          deployedNetwork.address
-        );
-        this.isInitialized = true;
-        return true;
-      } else {
-        console.error('Trading contract not deployed to the detected network.');
-        return false;
-      }
+      // Connect to Ganache
+      this.web3 = new Web3('http://localhost:7545');
+      this.isInitialized = true;
     } catch (error) {
       console.error('Failed to initialize Web3:', error);
-      return false;
+      throw error;
     }
   }
 
@@ -158,6 +135,34 @@ class Web3Service {
       };
     } catch (error) {
       console.error('Trade execution failed:', error);
+      throw error;
+    }
+  }
+
+  async assignWalletToUser() {
+    if (!this.isInitialized) await this.initialize();
+    
+    try {
+      // Get all accounts from Ganache
+      const accounts = await this.web3.eth.getAccounts();
+      if (accounts.length === 0) {
+        throw new Error('No Ganache accounts available');
+      }
+      
+      // Select a random account
+      const randomIndex = Math.floor(Math.random() * accounts.length);
+      this.account = accounts[randomIndex];
+      
+      // Get the balance
+      const balance = await this.web3.eth.getBalance(this.account);
+      const ethBalance = this.web3.utils.fromWei(balance, 'ether');
+      
+      return {
+        address: this.account,
+        balance: ethBalance
+      };
+    } catch (error) {
+      console.error('Failed to assign wallet:', error);
       throw error;
     }
   }

@@ -7,49 +7,24 @@ import Features from './components/Features';
 import TradingStats from './components/TradingStats';
 import NotFound from './components/404';
 import Developers from './components/Developers';
-import Wallet from './components/Wallet';
-import About from './components/About'
+import About from './components/About';
 import Market from './components/Market';
 import Trade from './components/Trade';
 import Transactions from './components/Transactions';
-import WalletDashboard from './components/WalletDashboard';
+import Login from './components/Login';
+import Wallet from './components/Wallet';
 import './App.css';
 
 function App() {
-  const [walletAddress, setWalletAddress] = useState('');
-  const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [isDropdownNavbarOpen, setIsDropdownNavbarOpen] = useState(false);
   const [isDropdownTradeFromOpen, setIsDropdownTradeFromOpen] = useState(false);
   const [isDropdownTradeToOpen, setIsDropdownTradeToOpen] = useState(false);
   const [transactions, setTransactions] = useState([]);
+  const [isWalletOpen, setIsWalletOpen] = useState(false);
 
   const handleDisconnect = () => {
-    setWalletAddress('');
-    setIsDropdownNavbarOpen(false);
-    setIsDropdownTradeFromOpen(false);
-  };
-
-  const generateRandomWallet = () => {
-    const chars = '0123456789abcdef';
-    let wallet = '0x';
-    for (let i = 0; i < 40; i++) {
-      wallet += chars[Math.floor(Math.random() * chars.length)];
-    }
-    return wallet;
-  };
-
-  const handleNewTransaction = (fromToken, fromAmount, toToken, toAmount, failed = false) => {
-    const newTransaction = {
-      senderWallet: walletAddress,
-      receiverWallet: failed ? null : generateRandomWallet(),
-      date: new Date().toLocaleString(),
-      tradingToken: fromToken,
-      tradingAmount: fromAmount,
-      receivingToken: toToken,
-      receivingAmount: toAmount,
-      status: failed ? 'Failed' : 'Success'
-    };
-    setTransactions([newTransaction, ...transactions]);
+    // Clear the wallet from context instead of local state
+    window.location.reload(); // Simple way to reset the app state
   };
 
   return (
@@ -57,28 +32,22 @@ function App() {
       <Router>
         <div className="min-h-screen bg-mystery-dark">
           <Navbar 
-            walletAddress={walletAddress} 
-            setIsWalletOpen={setIsWalletOpen}
-            isDropdownOpen={isDropdownNavbarOpen}
             setIsDropdownOpen={setIsDropdownNavbarOpen}
+            isDropdownOpen={isDropdownNavbarOpen}
             handleDisconnect={handleDisconnect}
+            setIsWalletOpen={setIsWalletOpen}
           />
           
+          {isWalletOpen && (
+            <Wallet 
+              isOpen={isWalletOpen}
+              onClose={() => setIsWalletOpen(false)}
+            />
+          )}
+
           <Routes>
-            <Route path="/" element={
-              <>
-                <Hero 
-                  walletAddress={walletAddress} 
-                  setIsWalletOpen={setIsWalletOpen}
-                />
-                <div className="bg-gradient-to-b from-[#0B041A] to-mystery-dark">
-                  <main className="container mx-auto px-4">
-                    <Features />
-                    <TradingStats />
-                  </main>
-                </div>
-              </>
-            } />
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<Hero />} />
             <Route path="/404" element={<NotFound />} />
             <Route path="/developers" element={<Developers />} />
             <Route path="/about" element={<About />} />
@@ -90,18 +59,10 @@ function App() {
                 setIsDropdownTradeFromOpen={setIsDropdownTradeFromOpen}
                 isDropdownTradeToOpen={isDropdownTradeToOpen}
                 setIsDropdownTradeToOpen={setIsDropdownTradeToOpen}
-                onTransaction={handleNewTransaction}
               />
             } />
-            <Route path="/wallet" element={<WalletDashboard />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
-
-          <Wallet 
-            isOpen={isWalletOpen}
-            onClose={() => setIsWalletOpen(false)}
-            setWalletAddress={setWalletAddress}
-          />
         </div>
       </Router>
     </WalletProvider>
