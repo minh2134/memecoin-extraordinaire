@@ -5,15 +5,14 @@ This file explains and documents API endpoints for the go backend.
 ## /trade/swap
 
 This API expects a {POST} request from the client.
-
-### POST 
 The POST request should contain a JSON in its body with the following schema:
 ```
 {
     "SourceCurr":   "BTC",          /* string, one of the supported currencies */
     "TargetCurr":   "PEPE",         /* string, one of the supported currencies */
     "SourceAmount": "14.99",        /* string or float, amount willing to trade */
-    "Rate": "0.588",                /* string or float, the trading rate, sourcecurr/targetcurr */
+    "Rate":         "0.588",        /* string or float, the trading rate, sourcecurr/targetcurr */
+    "Slippage":     "0.05"          /* string or float, the slippage, expressed in numbers, not percentage unit */
     "SourceAddress":"0xDEADBEEF",   /* string, source address of the client */
 }
 ```
@@ -36,7 +35,48 @@ If the status is `200` the body response JSON has this schema:
     "ToCurr":           "PEPE"              /* string, target currency */
 }
 ```
-for `*Amount` keys the string should (and expected) be a valid real number
+
+## /trade/limit
+
+This API expects a {POST} request from the client.
+The POST request should contain a JSON in its body with the following schema:
+```
+
+{
+    "SourceCurr":   "BTC",          /* string, one of the supported currencies */
+    "TargetCurr":   "PEPE",         /* string, one of the supported currencies */
+    "SourceAmount": "14.99",        /* string or float, amount willing to trade */
+    "Rate":         "0.588",        /* string or float, the trading rate, sourcecurr/targetcurr */
+    "SourceAddress":"0xDEADBEEF",   /* string, source address of the client */
+}
+```
+
+Return codes:
+```
+200: Successful
+400: Bad request, check request body
+404: Resources not found
+```
+
+If return code is `200` the response body should be a JSON with this schema:
+```
+{
+    "IsMatched":    true    /* if the limit order is matched */
+    "SwapDetails: {         /* if matched, contains swap details */
+        "TradedAddress":    "0xDEADBEEF",       /* string, the traded wallet */
+        "TradedAmount":     "14.99",            /* string, traded amount */
+        "ReceivedAmount":   "25.99",            /* string, received amount */
+        "FromCurr":         "BTC",              /* string, source currency */
+        "ToCurr":           "PEPE"              /* string, target currency */
+    }
+}
+                    
+```
+if `IsMatched` is `false`, the limit request instead will be inserted to the database
+
+
+
+for `*Amount`, `Rate`, `Slippage` keys the string should (and expected to) be a valid real number
 
 Smart Contract Implementation with Mock Wallet using Ganache
 1.	Compile and Deploy the Trading Contract:

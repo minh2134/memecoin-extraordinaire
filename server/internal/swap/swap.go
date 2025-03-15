@@ -20,6 +20,7 @@ type SwapRequest struct {
 	SourceAmount	decimal.Decimal
 	Rate		decimal.Decimal
 	SourceAddress	string
+	Slippage 	decimal.Decimal
 }
 
 type SwapResult struct {
@@ -50,9 +51,10 @@ func Swap(db *sql.DB, sr SwapRequest) (SwapResult, error) {
 	`
 	var (
 		rate, _ = sr.Rate.Pow(decimal.NewFromInt(-1)).Float64()
+		slippage, _ = sr.Slippage.Float64()
 		
-		minrate float64 = rate * (0.95)
-		maxrate float64 = rate * (1.05)
+		minrate float64 = rate * (1.0 - slippage)
+		maxrate float64 = rate * (1.0 + slippage)
 	)
 
 	validSwap := tx.QueryRow(orderMatch, 
