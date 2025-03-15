@@ -3,19 +3,17 @@
 
 *server* is for a go backend server, assignment 2. Currently extremely barebone and unusable.
 
-# External build dependencies
+# External dependencies
 You will need to have:
 - gcc
 - go
 - yarn
 - sqlite
+- kurtosis
+- docker
 
 # Start the backend
-```
-cd server
-go run .
-```
-now you can go to `localhost:8080` to start using the backend 
+Refer to `server/README.md`
 
 # Start the front end:
 

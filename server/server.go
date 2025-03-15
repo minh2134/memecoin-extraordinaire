@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	// internal server packages
+	"server/internal/blockchain"
 	"server/internal/database"
 	"server/internal/limit"
 	"server/internal/swap"
@@ -48,7 +49,8 @@ func main() {
 	mux.HandleFunc("/", handler)
 	mux.HandleFunc("POST /trade/swap", swapHandler)
 	mux.HandleFunc("POST /trade/limit", limitHandler)
-
+	mux.HandleFunc("GET /blockchain/blocknumber", bcBlockNumberHandler)
+	
 	log.Println("Handling connection at localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }
@@ -123,4 +125,13 @@ func limitHandler (w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println(err)
 	}
+}
+
+func bcBlockNumberHandler(w http.ResponseWriter, r *http.Request) {
+	enableCORS(&w)
+	client, err := blockchain.Conn()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer client.Close()
 }
