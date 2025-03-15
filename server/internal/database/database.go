@@ -39,6 +39,15 @@ type TransactionRow struct {
 	TargetAmount 	decimal.Decimal
 }
 
+type LimitRow struct {
+	Id 		int 
+	SourceAddress 	string
+	SourceAmount 	decimal.Decimal
+	Rate 		decimal.Decimal
+	FromCurr	string
+	ToCurr		string
+}
+
 func Open() (*sql.DB, error) {
 	if _, err := os.Stat(dbFile); err != nil {
 		needBootstrap = true

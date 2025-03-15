@@ -30,19 +30,6 @@ type SwapResult struct {
 	ToCurr		string
 }
 
-
-
-// struct for holding results from querying limit orders
-type LimitRow struct {
-	Id 		int 
-	SourceAddress 	string
-	SourceAmount 	decimal.Decimal
-	Rate 		decimal.Decimal
-	FromCurr	string
-	ToCurr		string
-	Status 		string
-}
-
 func Swap(db *sql.DB, sr SwapRequest) (SwapResult, error) {
 	var returnValues SwapResult
 	tx, err := db.Begin()
@@ -75,7 +62,7 @@ func Swap(db *sql.DB, sr SwapRequest) (SwapResult, error) {
 				minrate,
 			)
 	
-	var result LimitRow
+	var result database.LimitRow
 	if err := validSwap.Scan(
 			&result.Id, 
 			&result.SourceAddress, 
@@ -100,7 +87,7 @@ func Swap(db *sql.DB, sr SwapRequest) (SwapResult, error) {
 		swapTargetAmount decimal.Decimal = sr.SourceAmount.Mul(result.Rate.Pow(decimal.NewFromInt(-1)))
 	)
 
-	if decimal.Min(sr.SourceAmount, limitTargetAmount) == limitTargetAmount { // limit order lower
+	if limitTargetAmount.LessThan(sr.SourceAmount) { // limit order lower
 		transaction.SourceAmount = result.SourceAmount
 		transaction.TargetAmount = limitTargetAmount
 	} else { // swap request lower
@@ -141,6 +128,8 @@ func Swap(db *sql.DB, sr SwapRequest) (SwapResult, error) {
 	}
 
 	log.Println("swap successfully")
+
+
 	returnValues.TradedAddress 	= transaction.SourceAddress
 	returnValues.TradedAmount	= transaction.TargetAmount
 	returnValues.ReceivedAmount 	= transaction.SourceAmount

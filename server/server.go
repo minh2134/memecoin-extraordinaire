@@ -9,8 +9,8 @@ import (
 
 	// internal server packages
 	"server/internal/database"
+	"server/internal/limit"
 	"server/internal/swap"
-
 )
 
 // TODO: resolves on how to take input for swap and limit order and what to return
@@ -47,7 +47,7 @@ func main() {
 	// Router
 	mux.HandleFunc("/", handler)
 	mux.HandleFunc("POST /trade/swap", swapHandler)
-	mux.HandleFunc("/trade/limit", limitHandler)
+	mux.HandleFunc("POST /trade/limit", limitHandler)
 
 	log.Println("Handling connection at localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
@@ -69,7 +69,7 @@ func swapHandler (w http.ResponseWriter, r *http.Request) {
 
 	enableCORS(&w)
 	var swapRequest swap.SwapRequest
-	// Expecting a JSON
+	// Expecting a valid JSON
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	err := dec.Decode(&swapRequest)
@@ -105,4 +105,22 @@ func swapHandler (w http.ResponseWriter, r *http.Request) {
 
 func limitHandler (w http.ResponseWriter, r *http.Request) {
 	enableCORS(&w)
+	var limitRequest limit.LimitRequest
+	// Expecting a valid JSON
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	err := dec.Decode(&limitRequest)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	
+	result, err := limit.Limit(db, limitRequest)
+	if err != nil {
+		log.Println(err)
+	}
+	err = json.NewEncoder(w).Encode(result)
+	if err != nil {
+		log.Println(err)
+	}
 }
