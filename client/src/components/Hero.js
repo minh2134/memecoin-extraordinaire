@@ -1,10 +1,13 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useWallet } from '../contexts/WalletContext';
 import cheems from '../assets/cheems.png';
 import dogeWow from '../assets/doge-wow.png';
+import TradingStats from './TradingStats';
 
-const Hero = ({ walletAddress, setIsWalletOpen }) => {
+const Hero = ({ setIsWalletOpen }) => {
   const navigate = useNavigate();
+  const { wallet } = useWallet();
 
   return (
     <div className="relative overflow-hidden">
@@ -49,7 +52,7 @@ const Hero = ({ walletAddress, setIsWalletOpen }) => {
         <div className="container mx-auto px-4">
           <div className="flex flex-col lg:flex-row items-center justify-between">
             <div className="lg:w-1/2 z-10">
-              {!walletAddress ? (
+              {!wallet ? (
                 <div className="flex gap-4">
                   <button 
                     className="font-heading px-8 py-3 rounded-full bg-mystery-accent text-white hover:opacity-90 transition-opacity"
@@ -76,20 +79,23 @@ const Hero = ({ walletAddress, setIsWalletOpen }) => {
                 </div>
               )}
             </div>
-            <div className={`${walletAddress ? 'w-full' : 'lg:w-1/2'} relative mt-8 lg:mt-0`}>
-              <div className="flex flex-col items-center">
-                <img 
-                  src={cheems} 
-                  alt="Cheems" 
-                  className="w-48 lg:w-64 animate-float mb-4" 
-                />
-                <p className="font-heading text-2xl bg-gradient-to-r from-[#FF6B6B] via-[#FFE66D] to-[#4ECDC4] text-transparent bg-clip-text p-4 border-2 border-[#4ECDC4] rounded-xl shadow-[0_0_15px_rgba(78,205,196,0.5)] animate-pulse">
-                  TRADE MEME! LIKE CHEEMS!
-                </p>
-              </div>
+            <div className="flex flex-col items-center">
+              <img 
+                src={cheems} 
+                alt="Cheems" 
+                className="w-48 lg:w-64 animate-float mb-4" 
+              />
+              <p className="font-heading text-2xl bg-gradient-to-r from-[#FF6B6B] via-[#FFE66D] to-[#4ECDC4] text-transparent bg-clip-text p-4 border-2 border-[#4ECDC4] rounded-xl shadow-[0_0_15px_rgba(78,205,196,0.5)] animate-pulse">
+                TRADE MEME! LIKE CHEEMS!
+              </p>
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Add TradingStats component */}
+      <div className="container mx-auto px-4">
+        <TradingStats />
       </div>
     </div>
   );

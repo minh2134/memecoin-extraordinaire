@@ -47,7 +47,7 @@ function App() {
 
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={<Hero />} />
+            <Route path="/" element={<Hero setIsWalletOpen={setIsWalletOpen} />} />
             <Route path="/404" element={<NotFound />} />
             <Route path="/developers" element={<Developers />} />
             <Route path="/about" element={<About />} />
