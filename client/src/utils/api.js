@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8080';
+export const API_BASE_URL = 'http://localhost:8080';
 
 export const swapTokens = async (swapRequest) => {
   const response = await fetch(`${API_BASE_URL}/trade/swap`, {

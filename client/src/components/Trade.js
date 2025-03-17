@@ -1,13 +1,16 @@
 import React, { useState } from 'react'
 import tradeIcon from '../assets/trade-icon.png'
 import { getSimpleTokenList } from '../utils/cryptoData';
+import Decimal from 'decimal.js';
+import { API_BASE_URL } from '../utils/api.js';
 
 const Trade = ({ 
   isDropdownTradeFromOpen, 
   setIsDropdownTradeFromOpen,
   isDropdownTradeToOpen,
   setIsDropdownTradeToOpen,
-  onTransaction
+  onTransaction,
+  wallet
 }) => {
   const [fromState, setFromState] = useState('BTC');
   const [toState, setToState] = useState('DOGE');
@@ -15,6 +18,7 @@ const Trade = ({
   const [toAmount, setToAmount] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [transactionStatus, setTransactionStatus] = useState(null); // 'success' or 'failed'
+  const [slippage, setSlippage] = useState('5'); // Default 5% slippage
   
   const tokens = getSimpleTokenList();
 
@@ -56,6 +60,20 @@ const Trade = ({
     }
   };
 
+  // Handle slippage change with validation
+  const handleSlippageChange = (e) => {
+    const value = e.target.value;
+    // Allow empty string or valid positive numbers
+    if (value === '' || (Number(value) >= 0 && Number(value) <= 100 && !value.includes('e'))) {
+      setSlippage(value);
+    }
+  };
+
+  // Set preset slippage values
+  const handleSlippagePreset = (value) => {
+    setSlippage(value);
+  };
+
   const closeModal = () => {
     setIsLoading(false);
     setTransactionStatus(null);
@@ -67,20 +85,79 @@ const Trade = ({
     setIsLoading(true);
     setTransactionStatus(null);
     
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const isSuccess = Math.random() >= 0.5;
-    
-    if (isSuccess) {
-      onTransaction(fromState, fromAmount, toState, toAmount);
+    try {
+      // Calculate slippage value (as a decimal for the API)
+      const slippageValue = (slippage === '' ? 5 : Number(slippage)) / 100;
+      
+      // Create the swap request in the format expected by the backend
+      const swapRequest = {
+        SourceCurr: fromState,
+        TargetCurr: toState,
+        SourceAmount: fromAmount,
+        Rate: new Decimal(toAmount).div(new Decimal(fromAmount)),
+        SourceAddress: wallet?.address || "guest-address",
+        Slippage: new Decimal(slippageValue)
+      };
+      
+      // Call the API
+      const response = await fetch(`${API_BASE_URL}/trade/swap`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(swapRequest)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to find a matching offer');
+      }
+      
+      // Parse response from the backend
+      const result = await response.json();
+      
+      // Format the transaction for the Transactions component
+      const transactionData = {
+        // Backend fields
+        tradedAddress: result.TradedAddress,
+        tradedAmount: result.TradedAmount,
+        receivedAmount: result.ReceivedAmount,
+        fromCurr: result.FromCurr,
+        toCurr: result.ToCurr,
+        // Additional fields for UI
+        sourceAddress: wallet?.address,
+        slippage: slippageValue,
+        status: 'Success',
+        date: new Date().toLocaleString()
+      };
+      
+      onTransaction(transactionData);
+      
       setTransactionStatus('success');
-    } else {
-      onTransaction(fromState, fromAmount, toState, toAmount, true);
+      setFromAmount('');
+      setToAmount('');
+      
+    } catch (error) {
+      console.error('Swap failed:', error);
+      
+      // Format failed transaction for the Transactions component
+      const failedTransaction = {
+        tradedAmount: fromAmount,
+        receivedAmount: '0',
+        fromCurr: fromState,
+        toCurr: toState,
+        sourceAddress: wallet?.address,
+        slippage: (slippage === '' ? 5 : Number(slippage)) / 100,
+        status: 'Failed',
+        date: new Date().toLocaleString(),
+        errorMessage: error.message
+      };
+      
+      onTransaction(failedTransaction);
+      
       setTransactionStatus('failed');
+    } finally {
+      setIsLoading(false);
     }
-    
-    setFromAmount('');
-    setToAmount('');
   };
 
   return (
@@ -171,6 +248,41 @@ const Trade = ({
                   placeholder="0.00"
                   className="text-2xl font-heading bg-transparent text-right w-32 focus:outline-none placeholder-gray-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
+              </div>
+            </div>
+
+            {/* Slippage Tolerance Section */}
+            <div className="w-full">
+              <div className="text-gray-400 mb-2">Slippage Tolerance</div>
+              <div className="flex flex-col gap-3">
+                {/* Presets for common slippage values */}
+                <div className="flex flex-row gap-2">
+                  {['0.5', '1', '3', '5'].map((value) => (
+                    <button
+                      key={value}
+                      onClick={() => handleSlippagePreset(value)}
+                      className={`px-3 py-2 rounded-lg ${
+                        slippage === value
+                          ? 'bg-mystery-accent text-white'
+                          : 'bg-[#372F47] text-gray-300 hover:bg-[#4a3f5e] transition-colors'
+                      }`}
+                    >
+                      {value}%
+                    </button>
+                  ))}
+                </div>
+                
+                {/* Custom slippage input */}
+                <div className="flex flex-row rounded-lg bg-[#372F47] overflow-hidden">
+                  <input
+                    type="number"
+                    value={slippage}
+                    onChange={handleSlippageChange}
+                    placeholder="5"
+                    className="flex-grow p-3 bg-transparent focus:outline-none text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <div className="bg-[#2e273a] px-4 flex items-center text-gray-300">%</div>
+                </div>
               </div>
             </div>
 

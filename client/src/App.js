@@ -59,6 +59,9 @@ function App() {
                 setIsDropdownTradeFromOpen={setIsDropdownTradeFromOpen}
                 isDropdownTradeToOpen={isDropdownTradeToOpen}
                 setIsDropdownTradeToOpen={setIsDropdownTradeToOpen}
+                onTransaction={(transactionData) => {
+                  setTransactions(prev => [transactionData, ...prev]);
+                }}
               />
             } />
             <Route path="*" element={<NotFound />} />
