@@ -2,6 +2,39 @@
 
 This file explains and documents API endpoints for the go backend.
 
+## /auth
+
+This API expects a {GET} request from the client
+This API tells the backend to assume a random pre-funded wallet as the transactor, then return that wallet address + balance to the sender
+
+Returns: status code `200`
+```
+{
+    "address":      "0x5918b2e647464d4743601a865753e64C8059Dc4F",
+    "balance":      10000,      /* float, in ether, inaccuracy is to be expected */
+    "weiBalance":   10000..0000 /* Int, in wei, accurate balance */
+}
+```
+## /account/balance
+
+This API expects a {GET} request from the client
+This API returns the currently assumed wallet address + balance to the sender
+
+Returns: status code 
+```
+200     Successful
+400     Bad Request, need to run /auth before checking balance!
+```
+
+Assume the status code is 200, the response JSON has the following schema:
+```
+{
+    "address":      "0x5918b2e647464d4743601a865753e64C8059Dc4F",
+    "balance":      10000,      /* float, in ether, inaccuracy is to be expected */
+    "weiBalance":   10000..0000 /* Int, in wei, accurate balance */
+}
+```
+
 ## /trade/swap
 
 This API expects a {POST} request from the client.

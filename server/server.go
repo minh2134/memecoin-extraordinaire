@@ -12,12 +12,18 @@ import (
 	"server/internal/database"
 	"server/internal/limit"
 	"server/internal/swap"
+
+	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 // TODO: resolves on how to take input for swap and limit order and what to return
 
-// global database pointer to pass around in the handler
-var db *sql.DB
+// global pointers to pass around in the handler
+var (
+	db *sql.DB
+	client *ethclient.Client
+	wallet blockchain.Wallet
+)
 
 func enableCORS(w *http.ResponseWriter) {
 	// signal to clients this response is allowed for Cross-Origin Resource Sharing
@@ -44,12 +50,23 @@ func main() {
 	log.Println("Connected to the database successfully.")
 	
 	err = database.Bootstrap(db)
+	
+	// some initial values for wallet
+
+	// connecting to a node in local blockchain testnet
+	client, err = blockchain.Conn()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer client.Close()
+
 
 	// Router
 	mux.HandleFunc("/", handler)
+	mux.HandleFunc("GET /auth", authHandler)
 	mux.HandleFunc("POST /trade/swap", swapHandler)
 	mux.HandleFunc("POST /trade/limit", limitHandler)
-	mux.HandleFunc("GET /blockchain/blocknumber", bcBlockNumberHandler)
+	mux.HandleFunc("GET /account/balance", balanceHandler)
 	
 	log.Println("Handling connection at localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
@@ -62,6 +79,21 @@ func handler (w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Fprint(w, "Hello, World!")
 }
+
+func authHandler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/auth" {
+		http.NotFound(w, r)
+		return
+	}
+	enableCORS(&w)
+
+	wallet = blockchain.ConnectWallet()
+	balance, weiBalance, _ := blockchain.GetBalance(client, wallet) 
+	ret := map[string] any { "address": wallet.Address, "balance": balance, "weiBalance": weiBalance }
+	json.NewEncoder(w).Encode(ret)
+}
+
+
 
 func swapHandler (w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/trade/swap" {
@@ -127,11 +159,19 @@ func limitHandler (w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func bcBlockNumberHandler(w http.ResponseWriter, r *http.Request) {
+func balanceHandler(w http.ResponseWriter, r *http.Request) {
 	enableCORS(&w)
-	client, err := blockchain.Conn()
-	if err != nil {
-		log.Fatal(err)
+	if r.URL.Path != "/account/balance" {
+		http.NotFound(w, r)
+		return
 	}
-	defer client.Close()
+
+	if wallet.Address == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	balance, weiBalance, _ := blockchain.GetBalance(client, wallet) 
+	ret := map[string] any {"address": wallet.Address, "balance": balance, "weiBalance": weiBalance }
+	json.NewEncoder(w).Encode(ret)
 }

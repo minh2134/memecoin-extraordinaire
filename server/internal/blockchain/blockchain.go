@@ -2,8 +2,11 @@ package blockchain
 
 import (
 	"context"
+	"errors"
 	"log"
+	"math"
 	"math/big"
+	"math/rand"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -16,15 +19,105 @@ import (
 // Provide functionalities related to the blockchain interaction here
 
 type Wallet struct {
-	address 	string
-	privateHex 	string
+	Address 	string
+	PrivateHex 	string
 }
+
 
 var (
 	urlRPC string 	= "http://127.0.0.1:32798"
 	testAccount common.Address = common.HexToAddress(
 					"0x25941dC771bB64514Fc8abBce970307Fb9d477e9")
 )
+
+// pre-funded accounts for testing
+var preFundedAccounts = [21]Wallet {
+		{
+			Address: "0x8943545177806ED17B9F23F0a21ee5948eCaa776",
+			PrivateHex: "bcdf20249abf0ed6d944c0288fad489e33f66b3960d9e6229c1cd214ed3bbe31",
+		},
+		{
+			Address: "0xE25583099BA105D9ec0A67f5Ae86D90e50036425",
+			PrivateHex: "39725efee3fb28614de3bacaffe4cc4bd8c436257e2c8bb887c4b5c4be45e76d",
+		},
+		{
+			Address: "0x614561D2d143621E126e87831AEF287678B442b8",
+			PrivateHex: "53321db7c1e331d93a11a41d16f004d7ff63972ec8ec7c25db329728ceeb1710",
+		},
+		{
+			Address: "0xf93Ee4Cf8c6c40b329b0c0626F28333c132CF241",
+			PrivateHex: "ab63b23eb7941c1251757e24b3d2350d2bc05c3c388d06f8fe6feafefb1e8c70",
+		},
+		{
+			Address: "0x802dCbE1B1A97554B4F50DB5119E37E8e7336417",
+			PrivateHex: "5d2344259f42259f82d2c140aa66102ba89b57b4883ee441a8b312622bd42491",
+		},
+		{
+			Address: "0xAe95d8DA9244C37CaC0a3e16BA966a8e852Bb6D6",
+			PrivateHex: "27515f805127bebad2fb9b183508bdacb8c763da16f54e0678b16e8f28ef3fff",
+		},
+		{
+			Address: "0x2c57d1CFC6d5f8E4182a56b4cf75421472eBAEa4",
+			PrivateHex: "7ff1a4c1d57e5e784d327c4c7651e952350bc271f156afb3d00d20f5ef924856",
+		},
+		{
+			Address: "0x741bFE4802cE1C4b5b00F9Df2F5f179A1C89171A",
+			PrivateHex: "3a91003acaf4c21b3953d94fa4a6db694fa69e5242b2e37be05dd82761058899",
+		},
+		{
+			Address: "0xc3913d4D8bAb4914328651C2EAE817C8b78E1f4c",
+			PrivateHex: "bb1d0f125b4fb2bb173c318cdead45468474ca71474e2247776b2b4c0fa2d3f5",
+		},
+		{
+			Address: "0x65D08a056c17Ae13370565B04cF77D2AfA1cB9FA",
+			PrivateHex: "850643a0224065ecce3882673c21f56bcf6eef86274cc21cadff15930b59fc8c",
+		},
+		{
+			Address: "0x3e95dFbBaF6B348396E6674C7871546dCC568e56",
+			PrivateHex: "94eb3102993b41ec55c241060f47daa0f6372e2e3ad7e91612ae36c364042e44",
+		},
+		{
+			Address: "0x5918b2e647464d4743601a865753e64C8059Dc4F",
+			PrivateHex: "daf15504c22a352648a71ef2926334fe040ac1d5005019e09f6c979808024dc7",
+		},
+		{
+			Address: "0x589A698b7b7dA0Bec545177D3963A2741105C7C9",
+			PrivateHex: "eaba42282ad33c8ef2524f07277c03a776d98ae19f581990ce75becb7cfa1c23",
+		},
+		{
+			Address: "0x4d1CB4eB7969f8806E2CaAc0cbbB71f88C8ec413",
+			PrivateHex: "3fd98b5187bf6526734efaa644ffbb4e3670d66f5d0268ce0323ec09124bff61",
+		},
+		{
+			Address: "0xF5504cE2BcC52614F121aff9b93b2001d92715CA",
+			PrivateHex: "5288e2f440c7f0cb61a9be8afdeb4295f786383f96f5e35eb0c94ef103996b64",
+		},
+		{
+			Address: "0xF61E98E7D47aB884C244E39E031978E33162ff4b",
+			PrivateHex: "f296c7802555da2a5a662be70e078cbd38b44f96f8615ae529da41122ce8db05",
+		},
+		{
+			Address: "0xf1424826861ffbbD25405F5145B5E50d0F1bFc90",
+			PrivateHex: "bf3beef3bd999ba9f2451e06936f0423cd62b815c9233dd3bc90f7e02a1e8673",
+		},
+		{
+			Address: "0xfDCe42116f541fc8f7b0776e2B30832bD5621C85",
+			PrivateHex: "6ecadc396415970e91293726c3f5775225440ea0844ae5616135fd10d66b5954",
+		},
+		{
+			Address: "0xD9211042f35968820A3407ac3d80C725f8F75c14",
+			PrivateHex: "a492823c3e193d6c595f37a18e3c06650cf4c74558cc818b16130b293716106f",
+		},
+		{
+			Address: "0xD8F3183DEF51A987222D845be228e0Bbb932C222",
+			PrivateHex: "c5114526e042343c6d1899cad05e1c00ba588314de9b96929914ee0df18d46b2",
+		},
+		{
+			Address: "0xafF0CA253b97e54440965855cec0A8a2E2399896",
+			PrivateHex: "04b9f63ecf84210c5366c66d68fa1f5da1fa4f634fad6dfc86178e4d79ff9e59",
+		},
+}
+
 
 func Conn() (*ethclient.Client, error) {
 	client, err := ethclient.Dial(urlRPC)
@@ -34,24 +127,73 @@ func Conn() (*ethclient.Client, error) {
 	return client, err
 }
 
-func WalletConnect(client *ethclient.Client, wallet Wallet) *bind.TransactOpts {
-	networkID, _ := client.NetworkID(context.Background())
-	privateKey, _ := crypto.HexToECDSA(wallet.privateHex)
+func newTransactor(client *ethclient.Client, wallet Wallet) (*bind.TransactOpts, error) {
+	var (
+		auth *bind.TransactOpts
+		err error
+	)
+
+	chainID, _ := client.ChainID(context.Background())
+	privateKey, _ := crypto.HexToECDSA(wallet.PrivateHex)
 	
-	address := common.HexToAddress(wallet.address)
+	address := common.HexToAddress(wallet.Address)
 	nonce, _ := client.PendingNonceAt(context.Background(), address)
 	gasPrices, _ := client.SuggestGasPrice(context.Background())
 
-	auth, _ := bind.NewKeyedTransactorWithChainID(privateKey, networkID)
+	auth, err = bind.NewKeyedTransactorWithChainID(privateKey, chainID)
+	if err != nil {
+		return auth, err
+	}
+
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = big.NewInt(0)
 	auth.GasLimit = uint64(3000000)
 	auth.GasPrice = gasPrices
 	
-	return auth
+	return auth, err
 }
 
-func DeploySmartContract(auth *bind.TransactOpts, client *ethclient.Client) {
+func getWallet(address string) (Wallet, error) {
+	var (
+		wallet Wallet
+		isFound bool = false
+	)
+
+	for _, account := range preFundedAccounts {
+		if account.Address == address || account.Address == address[:2] {
+			wallet = account
+			isFound = true
+		}
+	}
+
+	if !isFound {
+		return wallet, errors.New("no wallet found at this given address")
+	}
+
+	return wallet, nil
+}
+
+func ConnectWallet() Wallet {
+	return preFundedAccounts[rand.Intn(len(preFundedAccounts))]
+}
+
+func GetBalance(client *ethclient.Client, wallet Wallet) (float64, *big.Int, error) {
+	address := common.HexToAddress(wallet.Address)
+	balance, err := client.BalanceAt(context.Background(), address, nil)
+	ethBalance, _ := balance.Float64()
+	ethBalance = ethBalance/math.Pow(10, 18)
+	return ethBalance, balance, err
+}
+
+func DeploySmartContract(addressHex string, client *ethclient.Client) (error) {
+	wallet, err := getWallet(addressHex)
+	if err != nil {
+		return err
+	}
+
+	auth, err := newTransactor(client, wallet)
 	address, tx, instance, err := smartContract.DeploySmartContract(auth, client)
 	log.Println(address, tx, instance, err)
+
+	return err
 }
