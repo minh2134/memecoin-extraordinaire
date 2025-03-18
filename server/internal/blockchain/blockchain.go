@@ -7,9 +7,11 @@ import (
 	"math"
 	"math/big"
 	"math/rand"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/shopspring/decimal"
@@ -149,13 +151,18 @@ func newTransactor(client *ethclient.Client, wallet Wallet) (*bind.TransactOpts,
 		auth *bind.TransactOpts
 		err error
 	)
+	
+	minPrice := big.NewInt(100)
 
 	chainID, _ := client.ChainID(context.Background())
 	privateKey, _ := crypto.HexToECDSA(wallet.PrivateHex)
 	
 	address := common.HexToAddress(wallet.Address)
 	nonce, _ := client.PendingNonceAt(context.Background(), address)
-	gasPrices, _ := client.SuggestGasPrice(context.Background())
+	gasPrices, err := client.SuggestGasPrice(context.Background())
+	if err != nil || gasPrices.Cmp(minPrice) < 0 {
+		gasPrices = minPrice
+	}
 
 	auth, err = bind.NewKeyedTransactorWithChainID(privateKey, chainID)
 	if err != nil {
@@ -202,29 +209,91 @@ func GetBalance(client *ethclient.Client, wallet Wallet) (float64, *big.Int, err
 	return ethBalance, balance, err
 }
 
-func DeploySmartContract(client *ethclient.Client) (common.Address, *smartContract.SmartContract, error) {
+func DeploySmartContract(client *ethclient.Client) (common.Address, 
+					*types.Transaction,
+					*smartContract.SmartContract,
+					error) {
 	var (
 		address common.Address
 		instance *smartContract.SmartContract
+		tx *types.Transaction
 	)
 	auth, err := newTransactor(client, godWallet)
 	if err != nil {
-		return address, instance, err
+		return address, tx, instance, err
 	}
-	address, _, instance, err = smartContract.DeploySmartContract(auth, client)
+	address, tx, instance, err = smartContract.DeploySmartContract(auth, client)
 
-	return address, instance, err
+	return address, tx, instance, err
 }
 
-func GetCurrBalance(instance *smartContract.SmartContract, 
+func GetCurrBalance(smAddress common.Address, 
 			client *ethclient.Client, 
-			request BalanceRequest) decimal.Decimal {
-	address := common.HexToAddress(request.Address)
-	balance,_ := instance.GetBalance(nil, address, request.Curr)
-	decimalBalance := decimal.NewFromBigInt(balance, 0)
-	decimalBalance = decimalBalance.Div(decimals)
+			request BalanceRequest) (decimal.Decimal, error) {
+	
+	instance, err := smartContract.NewSmartContract(smAddress, client)
+	if err != nil {
+		log.Println("failed at getting an instance")
+		return decimal.NewFromInt(1), err
+	}
 
-	return decimalBalance
+	address := common.HexToAddress(request.Address)
+	balance, err := instance.GetBalance(nil, address, request.Curr)
+	if err != nil {
+		return decimal.NewFromInt(3), err
+	}
+
+	decimalBalance := decimal.NewFromBigInt(balance, 1)
+	//decimalBalance = decimalBalance.Div(decimals)
+
+	return decimalBalance, err
+}
+
+func Mint(instance *smartContract.SmartContract, client *ethclient.Client) error {
+	// minting some tokens for accounts to trade
+	var (
+		currency = [5]string {
+			"DOGE",
+			"BTC",
+			"SHIB",
+			"BONK",
+			"PEPE",
+		}
+		err error
+		wg sync.WaitGroup
+	)
+	amount := big.NewInt(1000)
+	
+	// we want to loop all of our minting transactions quickly
+	// but we also want to wait for all transactions to be mined before going any
+	// further
+	// wg is here as a counter for pending transaction, adding one when a new
+	// transaction is created
+	// each WaitMined + wg counter decrease is wrapped in a goroutine, allowing us
+	// to do this asynchronously
+	for _, wallet := range preFundedAccounts {
+		for _, curr := range currency {
+			wg.Add(1)
+			auth, err := newTransactor(client, godWallet)
+			if err != nil {
+				return err
+			}
+			log.Print("Currently minting at ", wallet.Address)
+			address := common.HexToAddress(wallet.Address)
+			tx, err:= instance.MintTokens(auth, address, curr, amount)
+			if err != nil {
+				log.Println(err)
+			}
+			go func (client *ethclient.Client, tx *types.Transaction) {
+				defer wg.Done()
+				bind.WaitMined(context.Background(), client, tx)
+			} (client, tx)
+		}
+	}
+
+	wg.Wait()
+	return err
+	
 }
 
 func ExecuteTrade(instance *smartContract.SmartContract, client *ethclient.Client, request SMTradeContract) {

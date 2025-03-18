@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -14,7 +15,9 @@ import (
 	"server/internal/smartContract"
 	"server/internal/swap"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
@@ -63,7 +66,19 @@ func main() {
 	defer client.Close()
 	
 	// Deploy the transaction on chain
-	smAddress, instance, err = blockchain.DeploySmartContract(client)
+	log.Println("Deploying the contract")
+	var tx *types.Transaction
+	smAddress, tx, instance, err = blockchain.DeploySmartContract(client)
+	log.Print("Wating for the contract to be mined...")
+	bind.WaitMined(context.Background(), client, tx)
+	log.Print("Done!")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Mint some tokens for trading
+	err = blockchain.Mint(instance, client)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -193,10 +208,13 @@ func currHandler(w http.ResponseWriter, r *http.Request) {
 
 	request := blockchain.BalanceRequest {
 		Address: wallet.Address,
-		Curr: "BTC",
+		Curr: "PEPE",
 	}
 
-	balance := blockchain.GetCurrBalance(instance, client, request)
+	balance, err := blockchain.GetCurrBalance(smAddress, client, request)
+	if err != nil {
+		log.Println(err)
+	}
 
 	log.Println(balance)
 }
