@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/shopspring/decimal"
 
 	"server/internal/smartContract"
 )
@@ -23,11 +24,25 @@ type Wallet struct {
 	PrivateHex 	string
 }
 
+type SMTradeContract struct {
+	SourceWallet 	Wallet
+	TargetWallet 	Wallet
+	SourceCurr 	string
+	TargetCurr 	string
+	SourceAmount	big.Int
+	TargetAmount 	big.Int
+}
+
+type BalanceRequest struct {
+	Address 	string
+	Curr 		string
+}
 
 var (
 	urlRPC string 	= "http://127.0.0.1:32798"
 	testAccount common.Address = common.HexToAddress(
 					"0x25941dC771bB64514Fc8abBce970307Fb9d477e9")
+	decimals decimal.Decimal = decimal.NewFromInt(int64(math.Pow10(8)))
 )
 
 // pre-funded accounts for testing
@@ -113,11 +128,13 @@ var preFundedAccounts = [21]Wallet {
 			PrivateHex: "c5114526e042343c6d1899cad05e1c00ba588314de9b96929914ee0df18d46b2",
 		},
 		{
+		
 			Address: "0xafF0CA253b97e54440965855cec0A8a2E2399896",
 			PrivateHex: "04b9f63ecf84210c5366c66d68fa1f5da1fa4f634fad6dfc86178e4d79ff9e59",
 		},
 }
 
+var godWallet = preFundedAccounts[0]
 
 func Conn() (*ethclient.Client, error) {
 	client, err := ethclient.Dial(urlRPC)
@@ -185,15 +202,38 @@ func GetBalance(client *ethclient.Client, wallet Wallet) (float64, *big.Int, err
 	return ethBalance, balance, err
 }
 
-func DeploySmartContract(addressHex string, client *ethclient.Client) (error) {
-	wallet, err := getWallet(addressHex)
+func DeploySmartContract(client *ethclient.Client) (common.Address, *smartContract.SmartContract, error) {
+	var (
+		address common.Address
+		instance *smartContract.SmartContract
+	)
+	auth, err := newTransactor(client, godWallet)
 	if err != nil {
-		return err
+		return address, instance, err
 	}
+	address, _, instance, err = smartContract.DeploySmartContract(auth, client)
 
-	auth, err := newTransactor(client, wallet)
-	address, tx, instance, err := smartContract.DeploySmartContract(auth, client)
-	log.Println(address, tx, instance, err)
+	return address, instance, err
+}
 
-	return err
+func GetCurrBalance(instance *smartContract.SmartContract, 
+			client *ethclient.Client, 
+			request BalanceRequest) decimal.Decimal {
+	address := common.HexToAddress(request.Address)
+	balance,_ := instance.GetBalance(nil, address, request.Curr)
+	decimalBalance := decimal.NewFromBigInt(balance, 0)
+	decimalBalance = decimalBalance.Div(decimals)
+
+	return decimalBalance
+}
+
+func ExecuteTrade(instance *smartContract.SmartContract, client *ethclient.Client, request SMTradeContract) {
+	auth, err := newTransactor(client, request.SourceWallet)
+	if err != nil {
+		return
+	}
+	
+	//sourceAddress := common.HexToAddress(request.SourceWallet.Address)
+	targetAddress := common.HexToAddress(request.TargetWallet.Address)
+	instance.ExecuteTrade(auth, targetAddress, request.SourceCurr, request.TargetCurr, &request.SourceAmount, &request.TargetAmount)
 }
