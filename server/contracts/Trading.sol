@@ -29,14 +29,17 @@ contract Trading {
     // Transaction counter for IDs
     uint256 private transactionCount = 0;
 
+    // Decimals
+    uint256 public decimals = 8;
+
     // Constructor to initialize with some currencies
     constructor() {
         // Add some initial currencies
-        addCurrency("BTC", 1000000);
-	addCurrency("DOGE", 1000000);
-	addCurrency("SHIB", 1000000);
-	addCurrency("BONK", 1000000);
-	addCurrency("PEPE", 1000000);
+        addCurrency("BTC", 1000000 * (10**decimals));
+	addCurrency("DOGE", 1000000 * (10**decimals));
+	addCurrency("SHIB", 1000000 * (10**decimals));
+	addCurrency("BONK", 1000000 * (10**decimals));
+	addCurrency("PEPE", 1000000 * (10**decimals));
     }
 
     // Function to add a new currency
