@@ -32,10 +32,11 @@ contract Trading {
     // Constructor to initialize with some currencies
     constructor() {
         // Add some initial currencies
-        addCurrency("MEME", 1000000);
-        addCurrency("ETH", 1000000);
         addCurrency("BTC", 1000000);
-        addCurrency("USDT", 1000000);
+	addCurrency("DOGE", 1000000);
+	addCurrency("SHIB", 1000000);
+	addCurrency("BONK", 1000000);
+	addCurrency("PEPE", 1000000);
     }
 
     // Function to add a new currency

@@ -107,8 +107,6 @@ If return code is `200` the response body should be a JSON with this schema:
 ```
 if `IsMatched` is `false`, the limit request instead will be inserted to the database
 
-
-
 for `*Amount`, `Rate`, `Slippage` keys the string should (and expected to) be a valid real number
 
 Smart Contract Implementation with Mock Wallet using Ganache
