@@ -1,3 +1,5 @@
+//@author Dinh Le Hoang Anh - 105508318
+//@author Pham Vu Minh - 105110564
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { WalletProvider } from './contexts/WalletContext';

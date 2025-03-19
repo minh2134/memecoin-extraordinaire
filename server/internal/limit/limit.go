@@ -1,3 +1,5 @@
+// @author Dinh Le Hoang Anh - 105508318
+// @author Pham Vu Minh - 105110564
 package limit
 
 import (
@@ -18,16 +20,16 @@ import (
 )
 
 type LimitRequest struct {
-	SourceAddress	string
-	SourceCurr 	string
-	TargetCurr	string
-	SourceAmount	decimal.Decimal
-	Rate 		decimal.Decimal
+	SourceAddress string
+	SourceCurr    string
+	TargetCurr    string
+	SourceAmount  decimal.Decimal
+	Rate          decimal.Decimal
 }
 
 type LimitResult struct {
-	IsMatched	bool
-	SwapDetails	swap.SwapResult
+	IsMatched   bool
+	SwapDetails swap.SwapResult
 }
 
 func match(tx *sql.Tx, lr LimitRequest) (database.LimitRow, bool) {
@@ -41,23 +43,23 @@ func match(tx *sql.Tx, lr LimitRequest) (database.LimitRow, bool) {
 	reversedRate := lr.Rate.Pow(decimal.NewFromInt(-1))
 
 	validLimit := tx.QueryRow(query,
-				lr.TargetCurr,
-				lr.SourceCurr,
-				lr.SourceAmount.Mul(reversedRate),
-				reversedRate,
-			)
+		lr.TargetCurr,
+		lr.SourceCurr,
+		lr.SourceAmount.Mul(reversedRate),
+		reversedRate,
+	)
 
 	var result database.LimitRow
-	err:= validLimit.Scan(
-			&result.Id,
-			&result.SourceAddress, 
-			&result.SourceAmount, 
-			&result.Rate, 
-			&result.FromCurr, 
-			&result.ToCurr,
-		) 
+	err := validLimit.Scan(
+		&result.Id,
+		&result.SourceAddress,
+		&result.SourceAmount,
+		&result.Rate,
+		&result.FromCurr,
+		&result.ToCurr,
+	)
 	if err != nil {
-			return result, false
+		return result, false
 	}
 	return result, true
 }
@@ -81,22 +83,21 @@ func Limit(db *sql.DB, lr LimitRequest, instance *smartContract.SmartContract, c
 		INSERT INTO limitOrders(sourceAddress, sourceAmount, rate, fromCurrency, toCurrency)
 		VALUES (?, ?, ?, ?, ?);
 	`
-	tx,_ := db.Begin()
+	tx, _ := db.Begin()
 	var (
-		err error
+		err          error
 		returnResult LimitResult
-		result database.LimitRow
-		txc *types.Transaction
+		result       database.LimitRow
+		txc          *types.Transaction
 	)
 	result, returnResult.IsMatched = match(tx, lr)
-	
-	
+
 	if returnResult.IsMatched {
 		var transaction database.TransactionRow
-		transaction.SourceAddress 	= result.SourceAddress
-		transaction.TargetAddress 	= lr.SourceAddress
-		transaction.SourceCurr		= result.FromCurr
-		transaction.TargetCurr 		= result.ToCurr
+		transaction.SourceAddress = result.SourceAddress
+		transaction.TargetAddress = lr.SourceAddress
+		transaction.SourceCurr = result.FromCurr
+		transaction.TargetCurr = result.ToCurr
 		if lr.SourceAmount.Mul(result.Rate).LessThan(lr.SourceAmount) { // limit order lower then using it as amount
 			transaction.SourceAmount = result.SourceAmount
 			transaction.TargetAmount = result.SourceAmount.Mul(result.Rate.Pow(decimal.NewFromInt(-1)))
@@ -104,13 +105,13 @@ func Limit(db *sql.DB, lr LimitRequest, instance *smartContract.SmartContract, c
 			transaction.SourceAmount = lr.SourceAmount.Mul(result.Rate)
 			transaction.TargetAmount = lr.SourceAmount
 		}
-		
-		returnResult.SwapDetails.TradedAddress 	= transaction.SourceAddress
-		returnResult.SwapDetails.TradedAmount 	= transaction.TargetAmount
+
+		returnResult.SwapDetails.TradedAddress = transaction.SourceAddress
+		returnResult.SwapDetails.TradedAmount = transaction.TargetAmount
 		returnResult.SwapDetails.ReceivedAmount = transaction.SourceAmount
-		returnResult.SwapDetails.FromCurr 	= transaction.TargetCurr
-		returnResult.SwapDetails.ToCurr 	= transaction.SourceCurr
-		
+		returnResult.SwapDetails.FromCurr = transaction.TargetCurr
+		returnResult.SwapDetails.ToCurr = transaction.SourceCurr
+
 		rslt, err := tx.Exec(markPending,
 			result.Id,
 			transaction.SourceAddress,
@@ -120,20 +121,19 @@ func Limit(db *sql.DB, lr LimitRequest, instance *smartContract.SmartContract, c
 			transaction.SourceAmount,
 			transaction.TargetAmount,
 		)
-		
+
 		// calling Smart Contract to trade
-		request := blockchain.SMTradeContract {
+		request := blockchain.SMTradeContract{
 			SourceAddress: transaction.SourceAddress,
 			TargetAddress: transaction.TargetAddress,
-			SourceCurr: transaction.SourceCurr,
-			TargetCurr: transaction.TargetCurr,
-			SourceAmount: transaction.SourceAmount,
-			TargetAmount: transaction.TargetAmount,
+			SourceCurr:    transaction.SourceCurr,
+			TargetCurr:    transaction.TargetCurr,
+			SourceAmount:  transaction.SourceAmount,
+			TargetAmount:  transaction.TargetAmount,
 		}
 
 		txc, err = blockchain.ExecuteTrade(instance, client, request)
 
-	
 		if err != nil {
 			log.Println("limit.go: error updating the transaction")
 			tx.Rollback()
@@ -157,31 +157,28 @@ func Limit(db *sql.DB, lr LimitRequest, instance *smartContract.SmartContract, c
 				return
 			}
 			tx2.Commit()
-		} (txc, client, rslt)
+		}(txc, client, rslt)
 
-
-		returnResult.SwapDetails.TradedAddress 	= transaction.SourceAddress
-		returnResult.SwapDetails.TradedAmount 	= transaction.TargetAmount
+		returnResult.SwapDetails.TradedAddress = transaction.SourceAddress
+		returnResult.SwapDetails.TradedAmount = transaction.TargetAmount
 		returnResult.SwapDetails.ReceivedAmount = transaction.SourceAmount
-		returnResult.SwapDetails.FromCurr 	= transaction.TargetCurr
-		returnResult.SwapDetails.ToCurr 	= transaction.SourceCurr
+		returnResult.SwapDetails.FromCurr = transaction.TargetCurr
+		returnResult.SwapDetails.ToCurr = transaction.SourceCurr
 
-		
 	} else {
 		// if no match, insert into order book for later matches
 		_, err := tx.Exec(insertToBook,
-				lr.SourceAddress,
-				lr.SourceAmount,
-				lr.Rate,
-				lr.SourceCurr,
-				lr.TargetCurr,
+			lr.SourceAddress,
+			lr.SourceAmount,
+			lr.Rate,
+			lr.SourceCurr,
+			lr.TargetCurr,
 		)
 		if err != nil {
 			log.Println("limit.go: failed to insert to limit order book")
 			tx.Rollback()
 			return returnResult, txc, err
 		}
-	
 
 	}
 

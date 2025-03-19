@@ -1,3 +1,5 @@
+//@author Dinh Le Hoang Anh - 105508318
+//@author Pham Vu Minh - 105110564
 import Web3 from 'web3';
 import TradingContractABI from '../contracts/Trading.json'; // ABI for the smart contract
 

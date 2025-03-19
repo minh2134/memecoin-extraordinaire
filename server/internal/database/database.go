@@ -1,3 +1,5 @@
+// @author Dinh Le Hoang Anh - 105508318
+// @author Pham Vu Minh - 105110564
 package database
 
 // This package holds all the relevant settings for setting a database connection
@@ -21,32 +23,32 @@ var dbFile string = "./database/memeextra.db"
 // sets sqlite3 opts as per go-sqlite3 doc
 // set journal to WAL for concurrent reads and writes
 var (
-	dbOptsURL string 			= "file:" + dbFile + "?_journal=WAL"
-	maxOpenConn int 			= 10
-	maxIdleConn int 			= 5
-	maxConnLifetime time.Duration 		= 5 * time.Minute
-	maxIdleConnLifetime time.Duration 	= 5 * time.Minute
+	dbOptsURL           string        = "file:" + dbFile + "?_journal=WAL"
+	maxOpenConn         int           = 10
+	maxIdleConn         int           = 5
+	maxConnLifetime     time.Duration = 5 * time.Minute
+	maxIdleConnLifetime time.Duration = 5 * time.Minute
 )
 
 var needBootstrap = false
 
 type TransactionRow struct {
-	Id 		int
-	SourceAddress	string
-	TargetAddress 	string
-	SourceCurr 	string
-	TargetCurr 	string
-	SourceAmount 	decimal.Decimal
-	TargetAmount 	decimal.Decimal
+	Id            int
+	SourceAddress string
+	TargetAddress string
+	SourceCurr    string
+	TargetCurr    string
+	SourceAmount  decimal.Decimal
+	TargetAmount  decimal.Decimal
 }
 
 type LimitRow struct {
-	Id 		int 
-	SourceAddress 	string
-	SourceAmount 	decimal.Decimal
-	Rate 		decimal.Decimal
-	FromCurr	string
-	ToCurr		string
+	Id            int
+	SourceAddress string
+	SourceAmount  decimal.Decimal
+	Rate          decimal.Decimal
+	FromCurr      string
+	ToCurr        string
 }
 
 func Open() (*sql.DB, error) {
@@ -60,7 +62,7 @@ func Open() (*sql.DB, error) {
 	db.SetConnMaxIdleTime(maxIdleConnLifetime)
 	db.SetConnMaxLifetime(maxConnLifetime)
 
-	return db,err
+	return db, err
 }
 
 func Bootstrap(d *sql.DB) error {
@@ -135,16 +137,16 @@ func Bootstrap(d *sql.DB) error {
 	if err != nil {
 		return err
 	}
-	
-	var currencies = [5]string {
-			"DOGE",
-			"BTC",
-			"SHIB",
-			"BONK",
-			"PEPE",
+
+	var currencies = [5]string{
+		"DOGE",
+		"BTC",
+		"SHIB",
+		"BONK",
+		"PEPE",
 	}
 
-	var addresses = [21]string {
+	var addresses = [21]string{
 		"0x8943545177806ED17B9F23F0a21ee5948eCaa776",
 		"0xE25583099BA105D9ec0A67f5Ae86D90e50036425",
 		"0x614561D2d143621E126e87831AEF287678B442b8",
@@ -174,13 +176,11 @@ func Bootstrap(d *sql.DB) error {
 		return err
 	}
 
-
-	
-	for i:=1; i<=1000; i++ {
+	for i := 1; i <= 1000; i++ {
 		addInd := rand.Intn(len(addresses))
 		curr1Ind := rand.Intn(len(currencies))
 		curr2Ind := curr1Ind
-		for { 
+		for {
 			curr2Ind = rand.Intn(len(currencies))
 			if curr2Ind != curr1Ind {
 				break
@@ -195,8 +195,7 @@ func Bootstrap(d *sql.DB) error {
 			return err
 		}
 	}
-	
 
-		tx.Commit()
+	tx.Commit()
 	return err
 }

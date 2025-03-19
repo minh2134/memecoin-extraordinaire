@@ -1,3 +1,5 @@
+//@author Dinh Le Hoang Anh - 105508318
+//@author Pham Vu Minh - 105110564
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import web3Service from '../utils/web3Service';
 

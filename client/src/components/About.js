@@ -1,3 +1,5 @@
+//@author Dinh Le Hoang Anh - 105508318
+//@author Pham Vu Minh - 105110564
 import React from 'react';
 import logo from '../assets/memecoin-logo.png'
 import logoMeme from '../assets/memecoin-about.png'

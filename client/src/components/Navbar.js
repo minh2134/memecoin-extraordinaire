@@ -1,3 +1,5 @@
+//@author Dinh Le Hoang Anh - 105508318
+//@author Pham Vu Minh - 105110564
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import memelogo from '../assets/memecoin.png';

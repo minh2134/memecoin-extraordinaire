@@ -1,3 +1,5 @@
+//@author Dinh Le Hoang Anh - 105508318
+//@author Pham Vu Minh - 105110564
 import React, { useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
 import { FaSearch } from 'react-icons/fa';

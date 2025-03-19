@@ -1,3 +1,5 @@
+//@author Dinh Le Hoang Anh - 105508318
+//@author Pham Vu Minh - 105110564
 // Centralized cryptocurrency data for reuse across the application
 export const cryptoList = [
   { 

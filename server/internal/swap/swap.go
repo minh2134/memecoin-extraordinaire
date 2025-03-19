@@ -1,3 +1,5 @@
+// @author Dinh Le Hoang Anh - 105508318
+// @author Pham Vu Minh - 105110564
 package swap
 
 import (
@@ -23,26 +25,26 @@ import (
 // if found, execute the trade, returns status 200 + recipient address
 
 type SwapRequest struct {
-	SourceCurr 	string
-	TargetCurr 	string
-	SourceAmount	decimal.Decimal
-	Rate		decimal.Decimal
-	SourceAddress	string
-	Slippage 	decimal.Decimal
+	SourceCurr    string
+	TargetCurr    string
+	SourceAmount  decimal.Decimal
+	Rate          decimal.Decimal
+	SourceAddress string
+	Slippage      decimal.Decimal
 }
 
 type SwapResult struct {
-	TradedAddress	string	
-	TradedAmount	decimal.Decimal
-	ReceivedAmount	decimal.Decimal
-	FromCurr 	string
-	ToCurr		string
+	TradedAddress  string
+	TradedAmount   decimal.Decimal
+	ReceivedAmount decimal.Decimal
+	FromCurr       string
+	ToCurr         string
 }
 
 type RateRequest struct {
-	SourceAddress 	string
-	SourceCurr 	string
-	TargetCurr 	string
+	SourceAddress string
+	SourceCurr    string
+	TargetCurr    string
 }
 
 func GetRate(db *sql.DB, req RateRequest) (decimal.Decimal, error) {
@@ -59,12 +61,12 @@ func GetRate(db *sql.DB, req RateRequest) (decimal.Decimal, error) {
 	`
 
 	rows, err := tx.Query(queryMatches,
-				req.SourceAddress,
-				req.TargetCurr,
-				req.SourceCurr,
-		)
+		req.SourceAddress,
+		req.TargetCurr,
+		req.SourceCurr,
+	)
 	defer rows.Close()
-	
+
 	var rates = []decimal.Decimal{}
 	var rate decimal.Decimal
 	for rows.Next() {
@@ -77,7 +79,7 @@ func GetRate(db *sql.DB, req RateRequest) (decimal.Decimal, error) {
 	}
 	// take the median
 	leng := len(rates) - 1
-	leng = leng/2
+	leng = leng / 2
 
 	return rates[leng], err
 }
@@ -85,7 +87,7 @@ func GetRate(db *sql.DB, req RateRequest) (decimal.Decimal, error) {
 func Swap(db *sql.DB, sr SwapRequest, instance *smartContract.SmartContract, client *ethclient.Client) (SwapResult, *types.Transaction, error) {
 	var (
 		returnValues SwapResult
-		txc *types.Transaction
+		txc          *types.Transaction
 	)
 	tx, err := db.Begin()
 	orderMatch := `
@@ -112,44 +114,42 @@ func Swap(db *sql.DB, sr SwapRequest, instance *smartContract.SmartContract, cli
 		WHERE id = ?;
 	`
 	var (
-		rate, _ = sr.Rate.Pow(decimal.NewFromInt(-1)).Float64()
+		rate, _     = sr.Rate.Pow(decimal.NewFromInt(-1)).Float64()
 		slippage, _ = sr.Slippage.Float64()
-		
+
 		minrate float64 = rate * (1.0 - slippage)
 		maxrate float64 = rate * (1.0 + slippage)
 	)
-	
+
 	// find if there's any match
 	validSwap := tx.QueryRow(orderMatch,
-				sr.SourceAddress,
-				sr.TargetCurr,
-				sr.SourceCurr,
-				maxrate,
-				minrate,
-			)
-	
+		sr.SourceAddress,
+		sr.TargetCurr,
+		sr.SourceCurr,
+		maxrate,
+		minrate,
+	)
+
 	var result database.LimitRow
 	if err := validSwap.Scan(
-			&result.Id, 
-			&result.SourceAddress, 
-			&result.SourceAmount, 
-			&result.Rate, 
-			&result.FromCurr, 
-			&result.ToCurr,
-		); err != nil {
+		&result.Id,
+		&result.SourceAddress,
+		&result.SourceAmount,
+		&result.Rate,
+		&result.FromCurr,
+		&result.ToCurr,
+	); err != nil {
 		log.Println("swap.go: Something wrong happened when parsing the resulted row")
 		return returnValues, txc, err
 	}
 	log.Println("swap.go: swap query successful")
 
-
-	
 	// determining the amount to be traded:
 	// find the maximum targetAmount of the limitRow, compare that to the SourceAmount of the swap, whichever lower will be the final value
 	var (
-		transaction database.TransactionRow
+		transaction       database.TransactionRow
 		limitTargetAmount decimal.Decimal = result.SourceAmount.Mul(result.Rate)
-		swapTargetAmount decimal.Decimal = sr.SourceAmount.Mul(result.Rate.Pow(decimal.NewFromInt(-1)))
+		swapTargetAmount  decimal.Decimal = sr.SourceAmount.Mul(result.Rate.Pow(decimal.NewFromInt(-1)))
 	)
 
 	if limitTargetAmount.LessThan(sr.SourceAmount) { // limit order lower
@@ -160,33 +160,32 @@ func Swap(db *sql.DB, sr SwapRequest, instance *smartContract.SmartContract, cli
 		transaction.TargetAmount = sr.SourceAmount
 	}
 	// filling in the rest of the transaction
-	transaction.SourceAddress	= result.SourceAddress
-	transaction.TargetAddress 	= sr.SourceAddress
-	transaction.SourceCurr		= result.FromCurr
-	transaction.TargetCurr 		= result.ToCurr
-	
+	transaction.SourceAddress = result.SourceAddress
+	transaction.TargetAddress = sr.SourceAddress
+	transaction.SourceCurr = result.FromCurr
+	transaction.TargetCurr = result.ToCurr
 
 	// calling Smart Contract to trade
-	request := blockchain.SMTradeContract {
+	request := blockchain.SMTradeContract{
 		SourceAddress: transaction.SourceAddress,
 		TargetAddress: transaction.TargetAddress,
-		SourceCurr: transaction.SourceCurr,
-		TargetCurr: transaction.TargetCurr,
-		SourceAmount: transaction.SourceAmount,
-		TargetAmount: transaction.TargetAmount,
+		SourceCurr:    transaction.SourceCurr,
+		TargetCurr:    transaction.TargetCurr,
+		SourceAmount:  transaction.SourceAmount,
+		TargetAmount:  transaction.TargetAmount,
 	}
 
 	txc, err = blockchain.ExecuteTrade(instance, client, request)
 
-	rslt, err := tx.Exec(markPending, 
-			result.Id,
-			transaction.SourceAddress,
-			transaction.TargetAddress,
-			transaction.SourceCurr,
-			transaction.TargetCurr,
-			transaction.SourceAmount,
-			transaction.TargetAmount,
-		)
+	rslt, err := tx.Exec(markPending,
+		result.Id,
+		transaction.SourceAddress,
+		transaction.TargetAddress,
+		transaction.SourceCurr,
+		transaction.TargetCurr,
+		transaction.SourceAmount,
+		transaction.TargetAmount,
+	)
 
 	go func(txc *types.Transaction, client *ethclient.Client, rslt driver.Result) {
 		// async, wait for transaction to be mined, then update the transaction
@@ -205,7 +204,7 @@ func Swap(db *sql.DB, sr SwapRequest, instance *smartContract.SmartContract, cli
 			return
 		}
 		tx2.Commit()
-	} (txc, client, rslt)
+	}(txc, client, rslt)
 
 	if err = tx.Commit(); err != nil {
 		log.Println("swap.go: database update failed")
@@ -214,12 +213,11 @@ func Swap(db *sql.DB, sr SwapRequest, instance *smartContract.SmartContract, cli
 
 	log.Println("swap successfully")
 
-
-	returnValues.TradedAddress 	= transaction.SourceAddress
-	returnValues.TradedAmount	= transaction.TargetAmount
-	returnValues.ReceivedAmount 	= transaction.SourceAmount
-	returnValues.FromCurr 		= transaction.TargetCurr
-	returnValues.ToCurr 		= transaction.SourceCurr
+	returnValues.TradedAddress = transaction.SourceAddress
+	returnValues.TradedAmount = transaction.TargetAmount
+	returnValues.ReceivedAmount = transaction.SourceAmount
+	returnValues.FromCurr = transaction.TargetCurr
+	returnValues.ToCurr = transaction.SourceCurr
 
 	return returnValues, txc, err
 }

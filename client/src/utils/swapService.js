@@ -1,3 +1,5 @@
+//@author Dinh Le Hoang Anh - 105508318
+//@author Pham Vu Minh - 105110564
 import { Decimal } from 'decimal.js';
 
 const API_BASE_URL = 'http://localhost:8080';
