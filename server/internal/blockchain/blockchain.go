@@ -27,8 +27,8 @@ type Wallet struct {
 }
 
 type SMTradeContract struct {
-	SourceWallet 	Wallet
-	TargetWallet 	Wallet
+	SourceAddress 	string
+	TargetAddress	string
 	SourceCurr 	string
 	TargetCurr 	string
 	SourceAmount	decimal.Decimal
@@ -306,8 +306,11 @@ func ExecuteTrade(instance *smartContract.SmartContract, client *ethclient.Clien
 		tx *types.Transaction
 		err error
 	)
+	
+	sourceWallet, _ := getWallet(request.SourceAddress)
+	targetWallet, _ := getWallet(request.TargetAddress)
 
-	auth, err := newTransactor(client, request.SourceWallet)
+	auth, err := newTransactor(client, sourceWallet)
 	if err != nil {
 		return tx, err
 	}
@@ -317,7 +320,7 @@ func ExecuteTrade(instance *smartContract.SmartContract, client *ethclient.Clien
 	targetAmount := request.TargetAmount.Mul(mult).BigInt()
 	
 	//sourceAddress := common.HexToAddress(request.SourceWallet.Address)
-	targetAddress := common.HexToAddress(request.TargetWallet.Address)
+	targetAddress := common.HexToAddress(targetWallet.Address)
 	tx, err = instance.ExecuteTrade(auth, targetAddress, request.SourceCurr, request.TargetCurr, sourceAmount, targetAmount)
 
 	return tx, err

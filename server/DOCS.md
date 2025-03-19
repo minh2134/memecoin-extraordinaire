@@ -46,7 +46,6 @@ The POST request should contain a JSON in its body with the following schema:
     "SourceAmount": "14.99",        /* string or float, amount willing to trade */
     "Rate":         "0.588",        /* string or float, the trading rate, sourcecurr/targetcurr */
     "Slippage":     "0.05"          /* string or float, the slippage, expressed in numbers, not percentage unit */
-    "SourceAddress":"0xDEADBEEF",   /* string, source address of the client */
 }
 ```
 

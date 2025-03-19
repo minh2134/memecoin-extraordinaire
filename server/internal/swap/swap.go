@@ -1,10 +1,17 @@
 package swap
 
 import (
+	"context"
 	"database/sql"
+	"database/sql/driver"
 	"log"
+	"server/internal/blockchain"
 	"server/internal/database"
+	"server/internal/smartContract"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/shopspring/decimal"
 )
 
@@ -31,23 +38,35 @@ type SwapResult struct {
 	ToCurr		string
 }
 
-func Swap(db *sql.DB, sr SwapRequest) (SwapResult, error) {
-	var returnValues SwapResult
+
+
+func Swap(db *sql.DB, sr SwapRequest, instance *smartContract.SmartContract, client *ethclient.Client) (SwapResult, *types.Transaction, error) {
+	var (
+		returnValues SwapResult
+		txc *types.Transaction
+	)
 	tx, err := db.Begin()
 	orderMatch := `
 		SELECT * FROM limitOrders WHERE 
+			sourceAddress <> ? AND
 			fromCurrency = ? AND 
 			toCurrency = ? AND
 			rate <= ? AND
 			rate >= ?;
 
 	`
-	markDone := `
+	markPending := `
 		DELETE FROM limitOrders 
 		WHERE id = ?;
 
-		INSERT INTO transactions (sourceAddress, targetAddress, sourceCurr, targetCurr, sourceAmount, targetAmount)
-		VALUES (?, ?, ?, ?, ?, ?);
+		INSERT INTO transactions (sourceAddress, targetAddress, sourceCurr, targetCurr, sourceAmount, targetAmount, status)
+		VALUES (?, ?, ?, ?, ?, ?, 'PEND');
+	`
+
+	markDone := `
+		UPDATE transactions 
+		SET status = 'DONE'
+		WHERE id = ?;
 	`
 	var (
 		rate, _ = sr.Rate.Pow(decimal.NewFromInt(-1)).Float64()
@@ -57,7 +76,8 @@ func Swap(db *sql.DB, sr SwapRequest) (SwapResult, error) {
 		maxrate float64 = rate * (1.0 + slippage)
 	)
 
-	validSwap := tx.QueryRow(orderMatch, 
+	validSwap := tx.QueryRow(orderMatch,
+				sr.SourceAddress,
 				sr.TargetCurr,
 				sr.SourceCurr,
 				maxrate,
@@ -73,9 +93,8 @@ func Swap(db *sql.DB, sr SwapRequest) (SwapResult, error) {
 			&result.FromCurr, 
 			&result.ToCurr,
 		); err != nil {
-		// TODO: needs proper error handling
 		log.Println("swap.go: Something wrong happened when parsing the resulted row")
-		return returnValues, err
+		return returnValues, txc, err
 	}
 	log.Println("swap.go: swap query successful")
 
@@ -96,20 +115,25 @@ func Swap(db *sql.DB, sr SwapRequest) (SwapResult, error) {
 		transaction.SourceAmount = swapTargetAmount
 		transaction.TargetAmount = sr.SourceAmount
 	}
-
-
-	// TODO: trigger some sort of smart contract here(?) 
-
 	// filling in the rest of the transaction
 	transaction.SourceAddress	= result.SourceAddress
 	transaction.TargetAddress 	= sr.SourceAddress
 	transaction.SourceCurr		= result.FromCurr
 	transaction.TargetCurr 		= result.ToCurr
 
-	log.Println("WARNING: not actually swapped, just simulate the udating database for now...")
-	
-	
-	_, err = tx.Exec(markDone, 
+	// TODO: trigger some sort of smart contract here(?)
+	request := blockchain.SMTradeContract {
+		SourceAddress: transaction.SourceAddress,
+		TargetAddress: transaction.TargetAddress,
+		SourceCurr: transaction.SourceCurr,
+		TargetCurr: transaction.TargetCurr,
+		SourceAmount: transaction.SourceAmount,
+		TargetAmount: transaction.TargetAmount,
+	}
+
+	txc, err = blockchain.ExecuteTrade(instance, client, request)
+
+	rslt, err := tx.Exec(markPending, 
 			result.Id,
 			transaction.SourceAddress,
 			transaction.TargetAddress,
@@ -118,15 +142,29 @@ func Swap(db *sql.DB, sr SwapRequest) (SwapResult, error) {
 			transaction.SourceAmount,
 			transaction.TargetAmount,
 		)
-	if err != nil {
-		log.Println("swap.go: Swap not successful (updating database failed)")
-		tx.Rollback()
-		return returnValues, err
-	}
-	
+
+	go func(txc *types.Transaction, client *ethclient.Client, rslt driver.Result) {
+		// async, wait for transaction to be mined, then update the transaction
+		tx2, _ := db.Begin()
+		id, err1 := rslt.LastInsertId()
+		if err1 != nil {
+			tx2.Rollback()
+			log.Println(err1)
+			return
+		}
+		bind.WaitMined(context.Background(), client, txc)
+		_, err1 = tx2.Exec(markDone, id)
+		if err1 != nil {
+			tx2.Rollback()
+			log.Println(err1)
+			return
+		}
+		tx2.Commit()
+	} (txc, client, rslt)
+
 	if err = tx.Commit(); err != nil {
 		log.Println("swap.go: database update failed")
-		return returnValues, err
+		return returnValues, txc, err
 	}
 
 	log.Println("swap successfully")
@@ -137,5 +175,6 @@ func Swap(db *sql.DB, sr SwapRequest) (SwapResult, error) {
 	returnValues.ReceivedAmount 	= transaction.SourceAmount
 	returnValues.FromCurr 		= transaction.TargetCurr
 	returnValues.ToCurr 		= transaction.SourceCurr
-	return returnValues, nil
+
+	return returnValues, txc, err
 }

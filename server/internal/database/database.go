@@ -186,8 +186,8 @@ func Bootstrap(d *sql.DB) error {
 				break
 			}
 		}
-		rate := (rand.Float64() + 0.001) * 100
-		amount := (rand.Float64() + 0.001) * 1000
+		rate := (rand.Float64() + 0.001) * 50
+		amount := (rand.Float64() + 0.001) * 10
 
 		_, err := tx.Exec(insertMock, addresses[addInd], amount, rate, currencies[curr1Ind], currencies[curr2Ind])
 		if err != nil {

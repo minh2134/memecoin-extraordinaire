@@ -114,13 +114,21 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 
 
 func swapHandler (w http.ResponseWriter, r *http.Request) {
+
 	if r.URL.Path != "/trade/swap" {
 		http.NotFound(w, r)
 		return
 	}
 
 	enableCORS(&w)
+	if wallet.Address == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+
 	var swapRequest swap.SwapRequest
+	swapRequest.SourceAddress = wallet.Address
 	// Expecting a valid JSON
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
@@ -130,12 +138,14 @@ func swapHandler (w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := swap.Swap(db, swapRequest)
+	result, tx, err := swap.Swap(db, swapRequest, instance, client)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusNotFound)
 		return 
 	}
+
+	log.Println(tx.Hash())
 	
 	err = json.NewEncoder(w).Encode(result)
 	if err != nil {
