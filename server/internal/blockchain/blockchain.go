@@ -31,8 +31,8 @@ type SMTradeContract struct {
 	TargetWallet 	Wallet
 	SourceCurr 	string
 	TargetCurr 	string
-	SourceAmount	big.Int
-	TargetAmount 	big.Int
+	SourceAmount	decimal.Decimal
+	TargetAmount 	decimal.Decimal
 }
 
 type BalanceRequest struct {
@@ -152,17 +152,12 @@ func newTransactor(client *ethclient.Client, wallet Wallet) (*bind.TransactOpts,
 		err error
 	)
 	
-	minPrice := big.NewInt(100)
-
 	chainID, _ := client.ChainID(context.Background())
 	privateKey, _ := crypto.HexToECDSA(wallet.PrivateHex)
 	
 	address := common.HexToAddress(wallet.Address)
 	nonce, _ := client.PendingNonceAt(context.Background(), address)
 	gasPrices, err := client.SuggestGasPrice(context.Background())
-	if err != nil || gasPrices.Cmp(minPrice) < 0 {
-		gasPrices = minPrice
-	}
 
 	auth, err = bind.NewKeyedTransactorWithChainID(privateKey, chainID)
 	if err != nil {
@@ -253,7 +248,6 @@ func GetCurrBalance(smAddress common.Address,
 	}
 	
 	decimalBalance := decimal.NewFromBigInt(balance, -int32(decimals.IntPart()))
-	//decimalBalance = decimalBalance.Div(decimals)
 
 	return decimalBalance, err
 }
@@ -272,7 +266,7 @@ func Mint(instance *smartContract.SmartContract, client *ethclient.Client) error
 		wg sync.WaitGroup
 	)
 	amount := decimal.NewFromInt(1000)
-	mult := decimal.NewFromInt(10).Pow(decimals) // multiplier to convert into raw int form
+	mult := decimal.NewFromInt(10).Pow(decimals) // multiplier to convert into raw int form with preferred precision
 	smAmount := amount.Mul(mult).BigInt()
 	
 	// we want to loop all of our minting transactions quickly
@@ -318,9 +312,13 @@ func ExecuteTrade(instance *smartContract.SmartContract, client *ethclient.Clien
 		return tx, err
 	}
 	
+	mult := decimal.NewFromInt(10).Pow(decimals) // multiplier to convert into raw int form with preferred precision
+	sourceAmount := request.SourceAmount.Mul(mult).BigInt()
+	targetAmount := request.TargetAmount.Mul(mult).BigInt()
+	
 	//sourceAddress := common.HexToAddress(request.SourceWallet.Address)
 	targetAddress := common.HexToAddress(request.TargetWallet.Address)
-	tx, err = instance.ExecuteTrade(auth, targetAddress, request.SourceCurr, request.TargetCurr, &request.SourceAmount, &request.TargetAmount)
+	tx, err = instance.ExecuteTrade(auth, targetAddress, request.SourceCurr, request.TargetCurr, sourceAmount, targetAmount)
 
 	return tx, err
 }
