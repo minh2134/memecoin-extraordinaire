@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"errors"
 	"log"
 	"server/internal/blockchain"
 	"server/internal/database"
@@ -38,7 +39,48 @@ type SwapResult struct {
 	ToCurr		string
 }
 
+type RateRequest struct {
+	SourceAddress 	string
+	SourceCurr 	string
+	TargetCurr 	string
+}
 
+func GetRate(db *sql.DB, req RateRequest) (decimal.Decimal, error) {
+	tx, err := db.Begin()
+	if err != nil {
+		return decimal.NewFromInt(0), err
+	}
+	queryMatches := `
+		SELECT rate FROM limitOrders WHERE
+			sourceAddress <> ? AND
+			fromCurrency = ? AND
+			toCurrency = ?
+		ORDER BY rate ASC;
+	`
+
+	rows, err := tx.Query(queryMatches,
+				req.SourceAddress,
+				req.TargetCurr,
+				req.SourceCurr,
+		)
+	defer rows.Close()
+	
+	var rates = []decimal.Decimal{}
+	var rate decimal.Decimal
+	for rows.Next() {
+		rows.Scan(&rate)
+		rate = rate.Pow(decimal.NewFromInt(-1))
+		rates = append(rates, rate)
+	}
+	if len(rates) == 0 {
+		return rate, errors.New("No rates found")
+	}
+	// take the median
+	leng := len(rates) - 1
+	leng = leng/2
+
+	return rates[leng], err
+}
 
 func Swap(db *sql.DB, sr SwapRequest, instance *smartContract.SmartContract, client *ethclient.Client) (SwapResult, *types.Transaction, error) {
 	var (
@@ -52,7 +94,8 @@ func Swap(db *sql.DB, sr SwapRequest, instance *smartContract.SmartContract, cli
 			fromCurrency = ? AND 
 			toCurrency = ? AND
 			rate <= ? AND
-			rate >= ?;
+			rate >= ?
+		ORDER BY rate DESC;
 
 	`
 	markPending := `
