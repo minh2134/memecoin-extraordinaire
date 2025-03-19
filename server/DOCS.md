@@ -109,6 +109,25 @@ if `IsMatched` is `false`, the limit request instead will be inserted to the dat
 
 for `*Amount`, `Rate`, `Slippage` keys the string should (and expected to) be a valid real number
 
+## /account/curr/{curr}
+This API expects a {GET} request from the client.
+This API expects a currency **symbol** in the URL in place for `{curr}` in the above API endpoint with an empty body.
+
+Return codes:
+```
+200     Successful
+400     Bad Request, please reach /auth first before checking for balance!
+404     Currency not found
+```
+
+If the status code is `200` we expect the following JSON schema:
+```
+{
+    "currency":     "BTC",  /* string, currency symbol */
+    "amount":       "10000" /* string, amount of said currency */
+}
+```
+
 Smart Contract Implementation with Mock Wallet using Ganache
 1.	Compile and Deploy the Trading Contract:
 •	Install Truffle: npm install -g truffle
