@@ -12,40 +12,72 @@ const Trade = ({
   onTransaction,
   wallet
 }) => {
-  // Add new state for tab selection
-  const [activeTab, setActiveTab] = useState('swap'); // 'swap' or 'limit'
+  const [activeTab, setActiveTab] = useState('swap');
   
+  // Separate states for swap and limit tabs
+  const [swapFromAmount, setSwapFromAmount] = useState('');
+  const [swapToAmount, setSwapToAmount] = useState('');
+  const [limitFromAmount, setLimitFromAmount] = useState('');
+  const [limitToAmount, setLimitToAmount] = useState('');
+  
+  // Common states
   const [fromState, setFromState] = useState('BTC');
   const [toState, setToState] = useState('DOGE');
-  const [fromAmount, setFromAmount] = useState('');
-  const [toAmount, setToAmount] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [transactionStatus, setTransactionStatus] = useState(null);
-  const [slippage, setSlippage] = useState('5'); // Only used for swap
-  
-  // New state for limit orders
   const [customRate, setCustomRate] = useState('');
   const [marketRate, setMarketRate] = useState(null);
-  
+
+  // Add new state for slippage
+  const [slippage, setSlippage] = useState('5'); // Default 5%
+
   const tokens = getSimpleTokenList();
+
+  // Reset values when switching tabs
+  const handleTabChange = (tab) => {
+    if (tab === activeTab) return;
+    
+    setActiveTab(tab);
+    if (tab === 'swap') {
+      setSwapFromAmount('');
+      setSwapToAmount('');
+    } else {
+      setLimitFromAmount('');
+      setLimitToAmount('');
+      setCustomRate(marketRate ? marketRate.toString() : '');
+    }
+  };
 
   // Fetch the market rate for the selected token pair
   useEffect(() => {
     const fetchMarketRate = async () => {
       if (fromState && toState && fromState !== toState) {
         try {
+          const rateRequest = {
+            SourceCurr: fromState,
+            TargetCurr: toState
+          };
+
           const response = await fetch(
-            `${API_BASE_URL}/trade/rate?from=${fromState}&to=${toState}`
+            `${API_BASE_URL}/trade/rate`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(rateRequest)
+            }
           );
           
           if (!response.ok) throw new Error('Failed to fetch market rate');
           
           const data = await response.json();
-          setMarketRate(new Decimal(data.rate));
+          const rate = new Decimal(data);  // Backend returns decimal directly
+          setMarketRate(rate);
           
-          // If customRate is empty, initialize it with the market rate
-          if (!customRate) {
-            setCustomRate(data.rate);
+          // Only set custom rate for limit orders if not already set
+          if (activeTab === 'limit' && !customRate) {
+            setCustomRate(rate.toString());
           }
         } catch (error) {
           console.error('Failed to fetch market rate:', error);
@@ -54,28 +86,45 @@ const Trade = ({
     };
     
     fetchMarketRate();
-  }, [fromState, toState]);
+  }, [fromState, toState, activeTab]);
 
-  // Calculate the expected amount based on the active tab and rates
+  // Calculate amounts based on active tab
   useEffect(() => {
-    if (!fromAmount) {
-      setToAmount('');
-      return;
+    if (activeTab === 'swap') {
+      if (!swapFromAmount) {
+        setSwapToAmount('');
+        return;
+      }
+      
+      try {
+        const amount = new Decimal(swapFromAmount);
+        if (marketRate) {
+          const calculatedAmount = amount.mul(marketRate).toFixed(6);
+          setSwapToAmount(calculatedAmount);
+        }
+      } catch (error) {
+        console.error('Error calculating swap amount:', error);
+        setSwapToAmount('');
+      }
+    } else {
+      if (!limitFromAmount || !customRate) {
+        setLimitToAmount('');
+        return;
+      }
+      
+      try {
+        const amount = new Decimal(limitFromAmount);
+        const calculatedAmount = amount.mul(new Decimal(customRate)).toFixed(6);
+        setLimitToAmount(calculatedAmount);
+      } catch (error) {
+        console.error('Error calculating limit amount:', error);
+        setLimitToAmount('');
+      }
     }
-    
-    if (activeTab === 'swap' && marketRate) {
-      // For swap, use market rate
-      const calculatedAmount = new Decimal(fromAmount).times(marketRate).toFixed(6);
-      setToAmount(calculatedAmount);
-    } else if (activeTab === 'limit' && customRate) {
-      // For limit, use custom rate
-      const calculatedAmount = new Decimal(fromAmount).times(customRate).toFixed(6);
-      setToAmount(calculatedAmount);
-    }
-  }, [fromAmount, marketRate, customRate, activeTab]);
+  }, [activeTab, swapFromAmount, limitFromAmount, marketRate, customRate]);
 
   const buttonClasses = `font-heading px-6 py-3 w-full rounded-[30px] bg-gradient-to-r 
-    ${(!fromAmount || (activeTab === 'limit' && !customRate)) 
+    ${(!swapFromAmount || (activeTab === 'limit' && !customRate)) 
       ? 'from-gray-500 to-gray-600 cursor-not-allowed' 
       : 'from-[#503BEE] to-[#8A2BE2] hover:from-[#8A2BE2] hover:to-[#503BEE]'} 
     text-white transition-all duration-300 shadow-lg hover:shadow-mystery-accent/50 flex items-center justify-center`;
@@ -98,22 +147,31 @@ const Trade = ({
 
   const handleSwapPositions = () => {
     const tempFrom = fromState;
-    const tempFromAmount = fromAmount;
     setFromState(toState);
-    setFromAmount(toAmount);
     setToState(tempFrom);
-    setToAmount(tempFromAmount);
-    
-    // Also swap the rates for limit orders
-    if (activeTab === 'limit' && marketRate) {
-      setCustomRate(new Decimal(1).div(new Decimal(customRate)).toFixed(6));
+
+    if (activeTab === 'swap') {
+      const tempAmount = swapFromAmount;
+      setSwapFromAmount(swapToAmount);
+      setSwapToAmount(tempAmount);
+    } else {
+      const tempAmount = limitFromAmount;
+      setLimitFromAmount(limitToAmount);
+      setLimitToAmount(tempAmount);
+      if (customRate) {
+        setCustomRate(new Decimal(1).div(new Decimal(customRate)).toFixed(6));
+      }
     }
   };
 
-  const handleAmountChange = (e, setter) => {
+  const handleAmountChange = (e) => {
     const value = e.target.value;
     if (value === '' || (Number(value) >= 0 && !value.includes('e'))) {
-      setter(value);
+      if (activeTab === 'swap') {
+        setSwapFromAmount(value);
+      } else {
+        setLimitFromAmount(value);
+      }
     }
   };
 
@@ -126,37 +184,33 @@ const Trade = ({
       setCustomRate(value);
       
       // Update to amount based on new rate if from amount exists
-      if (fromAmount && value !== '') {
+      if (activeTab === 'limit' && limitFromAmount && value !== '') {
         try {
           // Convert both values to Decimal objects to avoid errors
-          const decimalFromAmount = new Decimal(fromAmount);
+          const decimalFromAmount = new Decimal(limitFromAmount);
           const decimalRate = new Decimal(value);
           
           // Calculate the new amount
           const calculatedAmount = decimalFromAmount.times(decimalRate).toFixed(6);
-          setToAmount(calculatedAmount);
+          setLimitToAmount(calculatedAmount);
         } catch (error) {
           console.error('Error calculating amount:', error);
           // Don't update the to amount if calculation fails
         }
       } else {
         // Clear the to amount if from amount is empty or rate is empty
-        setToAmount('');
+        setLimitToAmount('');
       }
     }
   };
 
-  // Handle slippage change with validation
+  // Add handler for slippage input
   const handleSlippageChange = (e) => {
     const value = e.target.value;
+    // Allow empty string or numbers between 0 and 100
     if (value === '' || (Number(value) >= 0 && Number(value) <= 100 && !value.includes('e'))) {
       setSlippage(value);
     }
-  };
-
-  // Set preset slippage values
-  const handleSlippagePreset = (value) => {
-    setSlippage(value);
   };
 
   const closeModal = () => {
@@ -166,27 +220,23 @@ const Trade = ({
 
   // Swap execution (market order)
   const handleSwap = async () => {
-    if (!fromAmount || !marketRate) return;
+    if (!swapFromAmount || !marketRate) return;
     
     setIsLoading(true);
     setTransactionStatus(null);
     
     try {
-      // Calculate slippage value (as a decimal for the API)
       const slippageValue = (slippage === '' ? 5 : Number(slippage)) / 100;
-      
-      // Create the swap request in the format expected by the backend
       const swapRequest = {
         SourceCurr: fromState,
         TargetCurr: toState,
-        SourceAmount: fromAmount,
+        SourceAmount: new Decimal(swapFromAmount),
         Rate: marketRate,
         Slippage: new Decimal(slippageValue)
       };
       
       console.log('Sending swap request:', swapRequest);
       
-      // Call the API
       const response = await fetch(`${API_BASE_URL}/trade/swap`, {
         method: 'POST',
         headers: {
@@ -196,19 +246,21 @@ const Trade = ({
       });
       
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Swap failed:', response.status, errorText);
         throw new Error('Failed to find a matching offer');
       }
       
+      // Parse response matching SwapResult struct from backend
       const result = await response.json();
       console.log('Swap result:', result);
       
-      // Format the transaction for the Transactions component
       const transactionData = {
-        tradedAddress: result.TradedAddress,
-        tradedAmount: result.TradedAmount,
-        receivedAmount: result.ReceivedAmount,
-        fromCurr: result.FromCurr,
-        toCurr: result.ToCurr,
+        tradedAddress: result.TradedAddress,    // Matches SwapResult.TradedAddress
+        tradedAmount: result.TradedAmount,      // Matches SwapResult.TradedAmount
+        receivedAmount: result.ReceivedAmount,  // Matches SwapResult.ReceivedAmount
+        fromCurr: result.FromCurr,             // Matches SwapResult.FromCurr
+        toCurr: result.ToCurr,                 // Matches SwapResult.ToCurr
         status: 'Success',
         orderType: 'Market',
         date: new Date().toLocaleString()
@@ -216,15 +268,15 @@ const Trade = ({
       
       onTransaction(transactionData);
       setTransactionStatus('success');
-      setFromAmount('');
-      setToAmount('');
+      setSwapFromAmount('');
+      setSwapToAmount('');
       
     } catch (error) {
       console.error('Swap failed:', error);
       
       // Format failed transaction for the Transactions component
       const failedTransaction = {
-        tradedAmount: fromAmount,
+        tradedAmount: swapFromAmount,
         receivedAmount: '0',
         fromCurr: fromState,
         toCurr: toState,
@@ -243,23 +295,21 @@ const Trade = ({
 
   // Limit order placement
   const handleLimitOrder = async () => {
-    if (!fromAmount || !customRate) return;
+    if (!limitFromAmount || !customRate) return;
     
     setIsLoading(true);
     setTransactionStatus(null);
     
     try {
-      // Create the limit order request
       const limitRequest = {
         SourceCurr: fromState,
         TargetCurr: toState,
-        SourceAmount: fromAmount,
+        SourceAmount: new Decimal(limitFromAmount),
         Rate: new Decimal(customRate)
       };
       
       console.log('Sending limit order request:', limitRequest);
       
-      // Call the API
       const response = await fetch(`${API_BASE_URL}/trade/limit`, {
         method: 'POST',
         headers: {
@@ -269,14 +319,17 @@ const Trade = ({
       });
       
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Limit order failed:', response.status, errorText);
         throw new Error('Failed to place limit order');
       }
       
+      // Parse response matching LimitResult struct from backend
       const result = await response.json();
       console.log('Limit order result:', result);
       
-      // If the order was matched immediately
       if (result.IsMatched) {
+        // Order was matched immediately - use SwapDetails from result
         const transactionData = {
           tradedAddress: result.SwapDetails.TradedAddress,
           tradedAmount: result.SwapDetails.TradedAmount,
@@ -291,10 +344,10 @@ const Trade = ({
         
         onTransaction(transactionData);
       } else {
-        // Order was placed but not matched yet
+        // Order was placed in the order book
         const pendingOrderData = {
-          tradedAmount: fromAmount,
-          receivedAmount: toAmount,
+          tradedAmount: limitFromAmount,
+          receivedAmount: limitToAmount,
           fromCurr: fromState,
           toCurr: toState,
           rate: customRate,
@@ -307,16 +360,16 @@ const Trade = ({
       }
       
       setTransactionStatus('success');
-      setFromAmount('');
-      setToAmount('');
+      setLimitFromAmount('');
+      setLimitToAmount('');
       setCustomRate('');
       
     } catch (error) {
       console.error('Limit order failed:', error);
       
       const failedTransaction = {
-        tradedAmount: fromAmount,
-        receivedAmount: toAmount,
+        tradedAmount: limitFromAmount,
+        receivedAmount: limitToAmount,
         fromCurr: fromState,
         toCurr: toState,
         rate: customRate,
@@ -335,14 +388,14 @@ const Trade = ({
 
   // Update the validation functions
   const canExecuteSwap = () => {
-    return fromAmount && 
-           parseFloat(fromAmount) > 0 && 
+    return swapFromAmount && 
+           parseFloat(swapFromAmount) > 0 && 
            fromState !== toState;
   };
 
   const canExecuteLimitOrder = () => {
-    return fromAmount && 
-           parseFloat(fromAmount) > 0 && 
+    return limitFromAmount && 
+           parseFloat(limitFromAmount) > 0 && 
            customRate && 
            parseFloat(customRate) > 0 && 
            fromState !== toState;
@@ -361,7 +414,7 @@ const Trade = ({
                     ? 'bg-mystery-accent text-white'
                     : 'bg-[#372F47] text-gray-300 hover:bg-[#4a3f5e] transition-colors'
                 }`}
-                onClick={() => setActiveTab('swap')}
+                onClick={() => handleTabChange('swap')}
               >
                 Swap
               </button>
@@ -371,7 +424,7 @@ const Trade = ({
                     ? 'bg-mystery-accent text-white'
                     : 'bg-[#372F47] text-gray-300 hover:bg-[#4a3f5e] transition-colors'
                 }`}
-                onClick={() => setActiveTab('limit')}
+                onClick={() => handleTabChange('limit')}
               >
                 Limit
               </button>
@@ -407,8 +460,8 @@ const Trade = ({
                 </div>
                 <input
                   type="number"
-                  value={fromAmount}
-                  onChange={(e) => handleAmountChange(e, setFromAmount)}
+                  value={activeTab === 'swap' ? swapFromAmount : limitFromAmount}
+                  onChange={handleAmountChange}
                   placeholder="0.00"
                   className="text-2xl font-heading bg-transparent text-right w-32 focus:outline-none placeholder-gray-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
@@ -455,9 +508,8 @@ const Trade = ({
                 </div>
                 <input
                   type="number"
-                  value={toAmount}
-                  disabled={activeTab === 'limit'} // Disable direct input in limit mode
-                  onChange={(e) => handleAmountChange(e, setToAmount)}
+                  value={activeTab === 'swap' ? swapToAmount : limitToAmount}
+                  disabled={true}
                   placeholder="0.00"
                   className={`text-2xl font-heading bg-transparent text-right w-32 focus:outline-none placeholder-gray-500 
                     [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
@@ -477,46 +529,29 @@ const Trade = ({
 
             {/* Conditional UI based on active tab */}
             {activeTab === 'swap' ? (
-              // Slippage Tolerance Section (only for swap)
+              // Only Slippage Input for Swap
               <div className="w-full">
-                <div className="text-gray-400 mb-2">Slippage Tolerance</div>
-                <div className="flex flex-col gap-3">
-                  {/* Presets for common slippage values */}
-                  <div className="flex flex-row gap-2">
-                    {['0.5', '1', '3', '5'].map((value) => (
-                      <button
-                        key={value}
-                        onClick={() => handleSlippagePreset(value)}
-                        className={`px-3 py-2 rounded-lg ${
-                          slippage === value
-                            ? 'bg-mystery-accent text-white'
-                            : 'bg-[#372F47] text-gray-300 hover:bg-[#4a3f5e] transition-colors'
-                        }`}
-                      >
-                        {value}%
-                      </button>
-                    ))}
-                  </div>
-                  
-                  {/* Custom slippage input */}
-                  <div className="flex flex-row rounded-lg bg-[#372F47] overflow-hidden">
-                    <input
-                      type="number"
-                      value={slippage}
-                      onChange={handleSlippageChange}
-                      placeholder="5"
-                      className="flex-grow p-3 bg-transparent focus:outline-none text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                    <div className="bg-[#2e273a] px-4 flex items-center text-gray-300">%</div>
+                <div className="flex justify-end items-center mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="text-gray-400 text-sm">Slippage:</div>
+                    <div className="flex items-center bg-[#372F47] rounded-lg overflow-hidden">
+                      <input
+                        type="number"
+                        value={slippage}
+                        onChange={handleSlippageChange}
+                        placeholder="5"
+                        className="w-16 p-1 bg-transparent text-right text-white text-sm focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <div className="bg-[#2e273a] px-2 text-gray-300 text-sm">%</div>
+                    </div>
                   </div>
                 </div>
               </div>
             ) : (
-              // Limit Rate Section (only for limit)
+              // Limit Rate Section
               <div className="w-full">
                 <div className="text-gray-400 mb-2">Limit Rate</div>
                 <div className="flex flex-col gap-3">
-                  {/* Custom rate input */}
                   <div className="flex flex-row rounded-lg bg-[#372F47] overflow-hidden">
                     <div className="bg-[#2e273a] px-4 flex items-center text-gray-300">1 {fromState} =</div>
                     <input
@@ -529,7 +564,7 @@ const Trade = ({
                     <div className="bg-[#2e273a] px-4 flex items-center text-gray-300">{toState}</div>
                   </div>
                   
-                  {/* Rate comparison */}
+                  {/* Market rate comparison */}
                   {marketRate && customRate && (
                     <div className="text-sm">
                       {new Decimal(customRate).greaterThan(marketRate) ? (
@@ -543,11 +578,6 @@ const Trade = ({
                       )}
                     </div>
                   )}
-                  
-                  {/* Rate explanation */}
-                  <div className="text-sm text-gray-400">
-                    Your order will execute when the market rate reaches your limit rate.
-                  </div>
                 </div>
               </div>
             )}
@@ -557,17 +587,17 @@ const Trade = ({
               <button 
                 className={buttonClasses}
                 onClick={handleSwap}
-                disabled={!fromAmount || !toAmount}
+                disabled={!swapFromAmount || !swapToAmount}
               >
-                {!fromAmount || !toAmount ? 'Enter an Amount' : 'Swap'}
+                {!swapFromAmount || !swapToAmount ? 'Enter an Amount' : 'Swap'}
               </button>
             ) : (
               <button 
                 className={buttonClasses}
                 onClick={handleLimitOrder}
-                disabled={!fromAmount || !customRate}
+                disabled={!limitFromAmount || !customRate}
               >
-                {!fromAmount ? 'Enter an Amount' : !customRate ? 'Enter a Rate' : 'Place Limit Order'}
+                {!limitFromAmount ? 'Enter an Amount' : !customRate ? 'Enter a Rate' : 'Place Limit Order'}
               </button>
             )}
           </div>
