@@ -53,26 +53,20 @@ const Trade = ({
     const fetchMarketRate = async () => {
       if (fromState && toState && fromState !== toState) {
         try {
-          const rateRequest = {
-            SourceCurr: fromState,
-            TargetCurr: toState
-          };
-
           const response = await fetch(
-            `${API_BASE_URL}/trade/rate`,
+            `${API_BASE_URL}/trade/swap/${fromState}/${toState}`,
             {
-              method: 'POST',
+              method: 'GET',
               headers: {
                 'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(rateRequest)
+              }
             }
           );
           
           if (!response.ok) throw new Error('Failed to fetch market rate');
           
           const data = await response.json();
-          const rate = new Decimal(data);  // Backend returns decimal directly
+          const rate = new Decimal(data.rate);
           setMarketRate(rate);
           
           // Only set custom rate for limit orders if not already set
