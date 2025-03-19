@@ -226,13 +226,15 @@ const Trade = ({
     setTransactionStatus(null);
     
     try {
-      const slippageValue = (slippage === '' ? 5 : Number(slippage)) / 100;
+      // Calculate slippage value (as a decimal for the API)
+      const slippageValue = new Decimal(slippage === '' ? '5' : slippage).div(100);
+      
       const swapRequest = {
         SourceCurr: fromState,
         TargetCurr: toState,
         SourceAmount: new Decimal(swapFromAmount),
         Rate: marketRate,
-        Slippage: new Decimal(slippageValue)
+        Slippage: slippageValue
       };
       
       console.log('Sending swap request:', swapRequest);
