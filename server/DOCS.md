@@ -111,7 +111,7 @@ If return code is `200` the response body should be a JSON with this schema:
 ```
 {
     "IsMatched":    true    /* if the limit order is matched */
-    "SwapDetails: {         /* if matched, contains swap details */
+    "SwapDetails": {         /* if matched, contains swap details */
         "TradedAddress":    "0xDEADBEEF",       /* string, the traded wallet */
         "TradedAmount":     "14.99",            /* string, traded amount */
         "ReceivedAmount":   "25.99",            /* string, received amount */
