@@ -181,9 +181,10 @@ const Trade = ({
         TargetCurr: toState,
         SourceAmount: fromAmount,
         Rate: marketRate,
-        SourceAddress: wallet?.address || "guest-address",
         Slippage: new Decimal(slippageValue)
       };
+      
+      console.log('Sending swap request:', swapRequest);
       
       // Call the API
       const response = await fetch(`${API_BASE_URL}/trade/swap`, {
@@ -198,27 +199,22 @@ const Trade = ({
         throw new Error('Failed to find a matching offer');
       }
       
-      // Parse response from the backend
       const result = await response.json();
+      console.log('Swap result:', result);
       
       // Format the transaction for the Transactions component
       const transactionData = {
-        // Backend fields
         tradedAddress: result.TradedAddress,
         tradedAmount: result.TradedAmount,
         receivedAmount: result.ReceivedAmount,
         fromCurr: result.FromCurr,
         toCurr: result.ToCurr,
-        // Additional fields for UI
-        sourceAddress: wallet?.address,
-        slippage: slippageValue,
         status: 'Success',
         orderType: 'Market',
         date: new Date().toLocaleString()
       };
       
       onTransaction(transactionData);
-      
       setTransactionStatus('success');
       setFromAmount('');
       setToAmount('');
@@ -232,8 +228,6 @@ const Trade = ({
         receivedAmount: '0',
         fromCurr: fromState,
         toCurr: toState,
-        sourceAddress: wallet?.address,
-        slippage: (slippage === '' ? 5 : Number(slippage)) / 100,
         status: 'Failed',
         orderType: 'Market',
         date: new Date().toLocaleString(),
@@ -241,7 +235,6 @@ const Trade = ({
       };
       
       onTransaction(failedTransaction);
-      
       setTransactionStatus('failed');
     } finally {
       setIsLoading(false);
@@ -258,12 +251,13 @@ const Trade = ({
     try {
       // Create the limit order request
       const limitRequest = {
-        SourceAddress: wallet?.address || "guest-address",
         SourceCurr: fromState,
         TargetCurr: toState,
         SourceAmount: fromAmount,
         Rate: new Decimal(customRate)
       };
+      
+      console.log('Sending limit order request:', limitRequest);
       
       // Call the API
       const response = await fetch(`${API_BASE_URL}/trade/limit`, {
@@ -279,6 +273,7 @@ const Trade = ({
       }
       
       const result = await response.json();
+      console.log('Limit order result:', result);
       
       // If the order was matched immediately
       if (result.IsMatched) {
@@ -288,7 +283,6 @@ const Trade = ({
           receivedAmount: result.SwapDetails.ReceivedAmount,
           fromCurr: result.SwapDetails.FromCurr,
           toCurr: result.SwapDetails.ToCurr,
-          sourceAddress: wallet?.address,
           rate: customRate,
           status: 'Success',
           orderType: 'Limit (Filled)',
@@ -303,7 +297,6 @@ const Trade = ({
           receivedAmount: toAmount,
           fromCurr: fromState,
           toCurr: toState,
-          sourceAddress: wallet?.address,
           rate: customRate,
           status: 'Pending',
           orderType: 'Limit (Open)',
@@ -326,7 +319,6 @@ const Trade = ({
         receivedAmount: toAmount,
         fromCurr: fromState,
         toCurr: toState,
-        sourceAddress: wallet?.address,
         rate: customRate,
         status: 'Failed',
         orderType: 'Limit',
@@ -335,11 +327,25 @@ const Trade = ({
       };
       
       onTransaction(failedTransaction);
-      
       setTransactionStatus('failed');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Update the validation functions
+  const canExecuteSwap = () => {
+    return fromAmount && 
+           parseFloat(fromAmount) > 0 && 
+           fromState !== toState;
+  };
+
+  const canExecuteLimitOrder = () => {
+    return fromAmount && 
+           parseFloat(fromAmount) > 0 && 
+           customRate && 
+           parseFloat(customRate) > 0 && 
+           fromState !== toState;
   };
 
   return (
