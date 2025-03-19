@@ -14,16 +14,14 @@ function Login() {
     setError('');
 
     try {
-      // Your existing login logic here
-      // const user = await loginUser(username, password);
-
-      // Automatically assign a Ganache wallet to the user
-      const walletAddress = await assignWallet();
-      console.log('Wallet assigned:', walletAddress);
+      // Assign a random prefunded wallet from Kurtosis
+      const walletInfo = await assignWallet();
+      console.log('Wallet assigned:', walletInfo);
 
       // Navigate to the main page or dashboard
       navigate('/');
     } catch (err) {
+      console.error("Login error:", err);
       setError(err.message);
     } finally {
       setIsLoading(false);
@@ -37,7 +35,7 @@ function Login() {
       <form onSubmit={handleLogin}>
         {/* Your login form fields */}
         <button type="submit" disabled={isLoading}>
-          {isLoading ? 'Logging in...' : 'Login'}
+          {isLoading ? 'Connecting to Kurtosis...' : 'Login'}
         </button>
       </form>
     </div>

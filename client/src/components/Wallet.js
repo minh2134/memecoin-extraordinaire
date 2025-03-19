@@ -21,6 +21,7 @@ const wallets = [
 
 const Wallet = ({ isOpen, onClose }) => {
   const [selectedWallet, setSelectedWallet] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const { assignWallet } = useWallet();
 
   if (!isOpen) return null;
@@ -36,12 +37,20 @@ const Wallet = ({ isOpen, onClose }) => {
     }
 
     try {
-      const result = await assignWallet();
-      console.log('Wallet assigned:', result);
+      setIsLoading(true);
+      console.log(`Connecting ${selectedWallet} wallet...`);
+      
+      // Get a random prefunded wallet from the backend
+      const walletInfo = await assignWallet();
+      console.log('Kurtosis wallet assigned:', walletInfo);
+      
+      alert(`Connected to wallet: ${walletInfo.address}\nBalance: ${walletInfo.balance} ETH`);
       onClose();
     } catch (error) {
       console.error('Failed to connect wallet:', error);
       alert(`Failed to connect wallet: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -86,12 +95,18 @@ const Wallet = ({ isOpen, onClose }) => {
           {/* Right side - QR code */}
           <div className="w-72 bg-[#2A2A2A] p-6 rounded-xl">
             <h3 className="font-heading text-xl text-white mb-6">How to connect to your wallet</h3>
-            <img 
-              src={qrCode} 
-              alt="QR Code"
-              className={`w-48 h-48 mx-auto mb-6 cursor-pointer ${selectedWallet ? 'hover:opacity-80' : 'opacity-50'}`}
-              onClick={handleQRCodeClick}
-            />
+            {isLoading ? (
+              <div className="w-48 h-48 mx-auto mb-6 flex items-center justify-center">
+                <p className="text-white">Connecting to Kurtosis...</p>
+              </div>
+            ) : (
+              <img 
+                src={qrCode} 
+                alt="QR Code"
+                className={`w-48 h-48 mx-auto mb-6 cursor-pointer ${selectedWallet ? 'hover:opacity-80' : 'opacity-50'}`}
+                onClick={handleQRCodeClick}
+              />
+            )}
             <div className="space-y-2">
               <p className="text-gray-300">1. Select your wallet from the left</p>
               <p className="text-gray-300">2. Click the QR code to connect</p>

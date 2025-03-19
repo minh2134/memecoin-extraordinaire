@@ -210,7 +210,6 @@ func GetBalance(client *ethclient.Client, wallet Wallet) (float64, *big.Int, err
 }
 
 func DeploySmartContract(client *ethclient.Client) (common.Address, 
-					*types.Transaction,
 					*smartContract.SmartContract,
 					error) {
 	var (
@@ -220,11 +219,21 @@ func DeploySmartContract(client *ethclient.Client) (common.Address,
 	)
 	auth, err := newTransactor(client, godWallet)
 	if err != nil {
-		return address, tx, instance, err
+		return address, instance, err
 	}
 	address, tx, instance, err = smartContract.DeploySmartContract(auth, client)
+	// Wait for contract to be mined to continue
+	log.Println("Waiting for the contract to be mined...")
+	bind.WaitMined(context.Background(), client, tx)
+	bigIntDecimals, _ := instance.Decimals(nil)
+	if err == nil {
+		// if no error occurs update the fixed-point decimal
+		decimals = decimal.NewFromBigInt(bigIntDecimals, 0)
+		log.Println("New decimal point:", decimals)
+	}
+	log.Print("Done!")
 
-	return address, tx, instance, err
+	return address, instance, err
 }
 
 func GetCurrBalance(smAddress common.Address, 
@@ -242,8 +251,8 @@ func GetCurrBalance(smAddress common.Address,
 	if err != nil {
 		return decimal.NewFromInt(3), err
 	}
-
-	decimalBalance := decimal.NewFromBigInt(balance, 1)
+	
+	decimalBalance := decimal.NewFromBigInt(balance, -int32(decimals.IntPart()))
 	//decimalBalance = decimalBalance.Div(decimals)
 
 	return decimalBalance, err
@@ -262,7 +271,9 @@ func Mint(instance *smartContract.SmartContract, client *ethclient.Client) error
 		err error
 		wg sync.WaitGroup
 	)
-	amount := big.NewInt(1000)
+	amount := decimal.NewFromInt(1000)
+	mult := decimal.NewFromInt(10).Pow(decimals) // multiplier to convert into raw int form
+	smAmount := amount.Mul(mult).BigInt()
 	
 	// we want to loop all of our minting transactions quickly
 	// but we also want to wait for all transactions to be mined before going any
@@ -278,15 +289,15 @@ func Mint(instance *smartContract.SmartContract, client *ethclient.Client) error
 			if err != nil {
 				return err
 			}
-			log.Print("Currently minting at ", wallet.Address)
 			address := common.HexToAddress(wallet.Address)
-			tx, err:= instance.MintTokens(auth, address, curr, amount)
+			tx, err:= instance.MintTokens(auth, address, curr, smAmount)
 			if err != nil {
 				log.Println(err)
 			}
 			go func (client *ethclient.Client, tx *types.Transaction) {
 				defer wg.Done()
 				bind.WaitMined(context.Background(), client, tx)
+				log.Println("Minted", amount, curr, "at", address)
 			} (client, tx)
 		}
 	}
@@ -296,13 +307,20 @@ func Mint(instance *smartContract.SmartContract, client *ethclient.Client) error
 	
 }
 
-func ExecuteTrade(instance *smartContract.SmartContract, client *ethclient.Client, request SMTradeContract) {
+func ExecuteTrade(instance *smartContract.SmartContract, client *ethclient.Client, request SMTradeContract) (*types.Transaction, error){
+	var (
+		tx *types.Transaction
+		err error
+	)
+
 	auth, err := newTransactor(client, request.SourceWallet)
 	if err != nil {
-		return
+		return tx, err
 	}
 	
 	//sourceAddress := common.HexToAddress(request.SourceWallet.Address)
 	targetAddress := common.HexToAddress(request.TargetWallet.Address)
-	instance.ExecuteTrade(auth, targetAddress, request.SourceCurr, request.TargetCurr, &request.SourceAmount, &request.TargetAmount)
+	tx, err = instance.ExecuteTrade(auth, targetAddress, request.SourceCurr, request.TargetCurr, &request.SourceAmount, &request.TargetAmount)
+
+	return tx, err
 }

@@ -18,11 +18,16 @@ export function WalletProvider({ children }) {
     setError(null);
     
     try {
-      const { address, balance } = await web3Service.assignWalletToUser();
-      setWallet(address);
-      setBalance(balance);
-      return address;
+      const walletInfo = await web3Service.assignWalletToUser();
+      console.log("Wallet assigned:", walletInfo);
+      
+      setWallet(walletInfo.address);
+      setBalance(walletInfo.balance);
+      
+      // Return the full wallet info including address and balance
+      return walletInfo;
     } catch (err) {
+      console.error("Error assigning wallet:", err);
       setError('Failed to assign wallet: ' + err.message);
       throw err;
     } finally {

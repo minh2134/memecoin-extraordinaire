@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -15,9 +14,7 @@ import (
 	"server/internal/smartContract"
 	"server/internal/swap"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
@@ -67,21 +64,19 @@ func main() {
 	
 	// Deploy the transaction on chain
 	log.Println("Deploying the contract")
-	var tx *types.Transaction
-	smAddress, tx, instance, err = blockchain.DeploySmartContract(client)
-	log.Print("Wating for the contract to be mined...")
-	bind.WaitMined(context.Background(), client, tx)
-	log.Print("Done!")
+	smAddress, instance, err = blockchain.DeploySmartContract(client)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Mint some tokens for trading
+	log.Println("Minting tokens to accounts for trading...")
 	err = blockchain.Mint(instance, client)
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println("Minting done!")
 
 	// Router
 	mux.HandleFunc("/", handler)
@@ -89,7 +84,7 @@ func main() {
 	mux.HandleFunc("POST /trade/swap", swapHandler)
 	mux.HandleFunc("POST /trade/limit", limitHandler)
 	mux.HandleFunc("GET /account/balance", balanceHandler)
-	mux.HandleFunc("GET /account/curr", currHandler)
+	mux.HandleFunc("GET /account/curr/{curr}", currHandler)
 	
 	log.Println("Handling connection at localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
@@ -202,19 +197,22 @@ func balanceHandler(w http.ResponseWriter, r *http.Request) {
 func currHandler(w http.ResponseWriter, r *http.Request) {
 	enableCORS(&w)
 	if wallet.Address == "" {
-		http.NotFound(w, r)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	request := blockchain.BalanceRequest {
 		Address: wallet.Address,
-		Curr: "PEPE",
+		Curr: r.PathValue("curr"),
 	}
 
 	balance, err := blockchain.GetCurrBalance(smAddress, client, request)
 	if err != nil {
-		log.Println(err)
+		http.NotFound(w, r)
+		log.Println(request.Curr, ":", err)
+		return
 	}
 
-	log.Println(balance)
+	ret := map[string] any {"currency": request.Curr, "amount": balance}
+	json.NewEncoder(w).Encode(ret)
 }

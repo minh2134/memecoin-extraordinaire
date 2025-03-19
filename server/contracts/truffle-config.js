@@ -61,16 +61,10 @@ module.exports = {
     // Ganache GUI default port
     development: {
       host: "127.0.0.1",     // Localhost (default: none)
-      port: 7545,            // Standard Ganache GUI port (default: none)
+      port: 32798,            // Standard Ganache GUI port (default: none)
       network_id: "*",       // Any network (default: none)
     },
-    // Ganache CLI default port
-    ganache_cli: {
-      host: "127.0.0.1",
-      port: 8545,
-      network_id: "*",
-    },
-    //
+
     // An additional network, but with some advanced options…
     // advanced: {
     //   port: 8777,             // Custom port
