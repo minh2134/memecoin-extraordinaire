@@ -83,6 +83,7 @@ func main() {
 	mux.HandleFunc("GET /auth", authHandler)
 	mux.HandleFunc("POST /trade/swap", swapHandler)
 	mux.HandleFunc("POST /trade/limit", limitHandler)
+	mux.HandleFunc("GET /trade/swap/{sourceCurr}/{targetCurr}", rateSuggestorHandler)
 	mux.HandleFunc("GET /account/balance", balanceHandler)
 	mux.HandleFunc("GET /account/curr/{curr}", currHandler)
 	
@@ -225,4 +226,29 @@ func currHandler(w http.ResponseWriter, r *http.Request) {
 
 	ret := map[string] any {"currency": request.Curr, "amount": balance}
 	json.NewEncoder(w).Encode(ret)
+}
+
+func rateSuggestorHandler (w http.ResponseWriter, r *http.Request) {
+	enableCORS(&w)
+
+	if wallet.Address == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	rateRequest :=  swap.RateRequest {
+		SourceAddress: wallet.Address,
+		SourceCurr: r.PathValue("sourceCurr"),
+		TargetCurr: r.PathValue("targetCurr"),
+	}
+	
+
+	rate, err := swap.GetRate(db, rateRequest)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	rateReturn := map[string] any {"rate": rate}
+	json.NewEncoder(w).Encode(rateReturn)
 }

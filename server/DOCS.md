@@ -68,6 +68,24 @@ If the status is `200` the body response JSON has this schema:
 }
 ```
 
+## /trade/swap/{sourceCurr}/{targetCurr}
+
+This API expects a {GET} request from the client, with `{sourceCurr}` and `{targetCurr}` replaced by currencies symbols
+E.g: `/trade/swap/BTC/DOGE`
+The GET request should contain an empty body.
+
+Return codes:
+```
+200:    Successful
+400:    Bad request. Login using /auth first before using this API
+404:    Not Found. No rates to suggest
+```
+
+If the status is `200` the body response JSON has this schema:
+```
+{ "rate": rate  /* float, the suggested rate */}
+```
+
 ## /trade/limit
 
 This API expects a {POST} request from the client.
