@@ -1,18 +1,22 @@
 package limit
 
 import (
+	"context"
 	"database/sql"
+	"database/sql/driver"
 	"log"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/shopspring/decimal"
 
+	"server/internal/blockchain"
 	"server/internal/database"
+	"server/internal/smartContract"
 	"server/internal/swap"
 )
 
-// TODO: should insert new limit order into database (maybe after checking if the order is swappable?)
-// maybe limit order is essentially swap with 0% slippage range?
-// how to match orders? Can a partial match acceptable?
 type LimitRequest struct {
 	SourceAddress	string
 	SourceCurr 	string
@@ -58,15 +62,21 @@ func match(tx *sql.Tx, lr LimitRequest) (database.LimitRow, bool) {
 	return result, true
 }
 
-func Limit(db *sql.DB, lr LimitRequest) (LimitResult, error) {
-	markDone := `
+func Limit(db *sql.DB, lr LimitRequest, instance *smartContract.SmartContract, client *ethclient.Client) (LimitResult, *types.Transaction, error) {
+	markPending := `
 		DELETE FROM limitOrders
 		WHERE id = ?;
 
-		INSERT INTO transactions (sourceAddress, targetAddress, sourceCurr, targetCurr, sourceAmount, targetAmount)
-		VALUES (?, ?, ?, ?, ?, ?);
+		INSERT INTO transactions (sourceAddress, targetAddress, sourceCurr, targetCurr, sourceAmount, targetAmount, status)
+		VALUES (?, ?, ?, ?, ?, ?, 'PEND');
 	`
-	
+
+	markDone := `
+		UPDATE transactions 
+		SET status = 'DONE'
+		WHERE id = ?;
+	`
+
 	insertToBook := `
 		INSERT INTO limitOrders(sourceAddress, sourceAmount, rate, fromCurrency, toCurrency)
 		VALUES (?, ?, ?, ?, ?);
@@ -76,6 +86,7 @@ func Limit(db *sql.DB, lr LimitRequest) (LimitResult, error) {
 		err error
 		returnResult LimitResult
 		result database.LimitRow
+		txc *types.Transaction
 	)
 	result, returnResult.IsMatched = match(tx, lr)
 	
@@ -86,30 +97,68 @@ func Limit(db *sql.DB, lr LimitRequest) (LimitResult, error) {
 		transaction.TargetAddress 	= lr.SourceAddress
 		transaction.SourceCurr		= result.FromCurr
 		transaction.TargetCurr 		= result.ToCurr
-		if lr.SourceAmount.Mul(result.Rate).LessThan(lr.SourceAmount) { // limit order lower
+		if lr.SourceAmount.Mul(result.Rate).LessThan(lr.SourceAmount) { // limit order lower then using it as amount
 			transaction.SourceAmount = result.SourceAmount
 			transaction.TargetAmount = result.SourceAmount.Mul(result.Rate.Pow(decimal.NewFromInt(-1)))
-		} else { // limit request lower
+		} else { // use limit request
 			transaction.SourceAmount = lr.SourceAmount.Mul(result.Rate)
 			transaction.TargetAmount = lr.SourceAmount
 		}
-			
-		// TODO: trigger some sort of smart contract here
+		
+		returnResult.SwapDetails.TradedAddress 	= transaction.SourceAddress
+		returnResult.SwapDetails.TradedAmount 	= transaction.TargetAmount
+		returnResult.SwapDetails.ReceivedAmount = transaction.SourceAmount
+		returnResult.SwapDetails.FromCurr 	= transaction.TargetCurr
+		returnResult.SwapDetails.ToCurr 	= transaction.SourceCurr
+		
+		rslt, err := tx.Exec(markPending,
+			result.Id,
+			transaction.SourceAddress,
+			transaction.TargetAddress,
+			transaction.SourceCurr,
+			transaction.TargetCurr,
+			transaction.SourceAmount,
+			transaction.TargetAmount,
+		)
+		
+		// calling Smart Contract to trade
+		request := blockchain.SMTradeContract {
+			SourceAddress: transaction.SourceAddress,
+			TargetAddress: transaction.TargetAddress,
+			SourceCurr: transaction.SourceCurr,
+			TargetCurr: transaction.TargetCurr,
+			SourceAmount: transaction.SourceAmount,
+			TargetAmount: transaction.TargetAmount,
+		}
 
-		_,err := tx.Exec(markDone,
-				result.Id,
-				transaction.SourceAddress,
-				transaction.TargetAddress,
-				transaction.SourceCurr,
-				transaction.TargetCurr,
-				transaction.SourceAmount,
-				transaction.TargetAmount,
-			)
+		txc, err = blockchain.ExecuteTrade(instance, client, request)
+
+	
 		if err != nil {
 			log.Println("limit.go: error updating the transaction")
 			tx.Rollback()
-			return returnResult, err
+			return returnResult, txc, err
 		}
+
+		go func(txc *types.Transaction, client *ethclient.Client, rslt driver.Result) {
+			// async, wait for transaction to be mined, then update the transaction
+			tx2, _ := db.Begin()
+			id, err1 := rslt.LastInsertId()
+			if err1 != nil {
+				tx2.Rollback()
+				log.Println(err1)
+				return
+			}
+			bind.WaitMined(context.Background(), client, txc)
+			_, err1 = tx2.Exec(markDone, id)
+			if err1 != nil {
+				tx2.Rollback()
+				log.Println(err1)
+				return
+			}
+			tx2.Commit()
+		} (txc, client, rslt)
+
 
 		returnResult.SwapDetails.TradedAddress 	= transaction.SourceAddress
 		returnResult.SwapDetails.TradedAmount 	= transaction.TargetAmount
@@ -117,6 +166,7 @@ func Limit(db *sql.DB, lr LimitRequest) (LimitResult, error) {
 		returnResult.SwapDetails.FromCurr 	= transaction.TargetCurr
 		returnResult.SwapDetails.ToCurr 	= transaction.SourceCurr
 
+		
 	} else {
 		// if no match, insert into order book for later matches
 		_, err := tx.Exec(insertToBook,
@@ -129,11 +179,12 @@ func Limit(db *sql.DB, lr LimitRequest) (LimitResult, error) {
 		if err != nil {
 			log.Println("limit.go: failed to insert to limit order book")
 			tx.Rollback()
-			return returnResult, err
+			return returnResult, txc, err
 		}
 	
-	tx.Commit()
 
 	}
-	return returnResult, err
+
+	tx.Commit()
+	return returnResult, txc, err
 }

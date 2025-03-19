@@ -118,7 +118,8 @@ func Swap(db *sql.DB, sr SwapRequest, instance *smartContract.SmartContract, cli
 		minrate float64 = rate * (1.0 - slippage)
 		maxrate float64 = rate * (1.0 + slippage)
 	)
-
+	
+	// find if there's any match
 	validSwap := tx.QueryRow(orderMatch,
 				sr.SourceAddress,
 				sr.TargetCurr,
@@ -163,8 +164,9 @@ func Swap(db *sql.DB, sr SwapRequest, instance *smartContract.SmartContract, cli
 	transaction.TargetAddress 	= sr.SourceAddress
 	transaction.SourceCurr		= result.FromCurr
 	transaction.TargetCurr 		= result.ToCurr
+	
 
-	// TODO: trigger some sort of smart contract here(?)
+	// calling Smart Contract to trade
 	request := blockchain.SMTradeContract {
 		SourceAddress: transaction.SourceAddress,
 		TargetAddress: transaction.TargetAddress,

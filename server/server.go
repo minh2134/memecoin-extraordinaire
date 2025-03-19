@@ -129,7 +129,6 @@ func swapHandler (w http.ResponseWriter, r *http.Request) {
 
 
 	var swapRequest swap.SwapRequest
-	swapRequest.SourceAddress = wallet.Address
 	// Expecting a valid JSON
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
@@ -138,6 +137,7 @@ func swapHandler (w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	swapRequest.SourceAddress = wallet.Address // source address always is wallet address
 
 	result, tx, err := swap.Swap(db, swapRequest, instance, client)
 	if err != nil {
@@ -146,7 +146,7 @@ func swapHandler (w http.ResponseWriter, r *http.Request) {
 		return 
 	}
 
-	log.Println(tx.Hash())
+	log.Println("swapTxHash:",tx.Hash())
 	
 	err = json.NewEncoder(w).Encode(result)
 	if err != nil {
@@ -168,6 +168,11 @@ func swapHandler (w http.ResponseWriter, r *http.Request) {
 
 func limitHandler (w http.ResponseWriter, r *http.Request) {
 	enableCORS(&w)
+	if wallet.Address == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	var limitRequest limit.LimitRequest
 	// Expecting a valid JSON
 	dec := json.NewDecoder(r.Body)
@@ -175,13 +180,23 @@ func limitHandler (w http.ResponseWriter, r *http.Request) {
 	err := dec.Decode(&limitRequest)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		log.Println("not good")
 		return
 	}
 	
-	result, err := limit.Limit(db, limitRequest)
+	limitRequest.SourceAddress = wallet.Address // source address always is wallet address
+
+	result, tx, err := limit.Limit(db, limitRequest, instance, client)
 	if err != nil {
 		log.Println(err)
+		http.NotFound(w, r)
+		return
 	}
+	if result.IsMatched {
+		log.Println("limitTxHash:", tx.Hash())
+	}
+	
+
 	err = json.NewEncoder(w).Encode(result)
 	if err != nil {
 		log.Println(err)
