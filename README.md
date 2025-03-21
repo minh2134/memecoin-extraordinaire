@@ -1,5 +1,5 @@
-//@author Dinh Le Hoang Anh - 105508318
-//@author Pham Vu Minh - 105110564
+<!--@author Dinh Le Hoang Anh - 105508318-->
+<!-- @author Pham Vu Minh - 105110564 -->
 # Directories:
 *client* is (currently) for React + tailwindcss, assignment1
 
