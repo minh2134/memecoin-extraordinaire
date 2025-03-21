@@ -1,3 +1,6 @@
+<!-- @author Dinh Le Hoang Anh - 105508318 -->
+<!-- @author Pham Vu Minh - 105110564 -->
+
 # API Documentation
 
 This file explains and documents API endpoints for the go backend.
