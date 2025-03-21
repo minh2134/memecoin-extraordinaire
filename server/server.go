@@ -65,7 +65,6 @@ func main() {
 	// Deploy the transaction on chain
 	log.Println("Deploying the contract")
 	smAddress, instance, err = blockchain.DeploySmartContract(client)
-
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -32,7 +32,28 @@ type LimitResult struct {
 	SwapDetails swap.SwapResult
 }
 
+// define sql queries
+var markPending string = `
+	DELETE FROM limitOrders
+	WHERE id = ?;
+
+	INSERT INTO transactions (sourceAddress, targetAddress, sourceCurr, targetCurr, sourceAmount, targetAmount, status)
+	VALUES (?, ?, ?, ?, ?, ?, 'PEND');
+`
+
+var markDone string = `
+	UPDATE transactions 
+	SET status = 'DONE'
+	WHERE id = ?;
+`
+
+var insertToBook string = `
+	INSERT INTO limitOrders(sourceAddress, sourceAmount, rate, fromCurrency, toCurrency)
+	VALUES (?, ?, ?, ?, ?);
+`
+
 func match(tx *sql.Tx, lr LimitRequest) (database.LimitRow, bool) {
+	// try to match a limit request to an existing limit order and report result
 	query := `
 		SELECT * FROM limitOrders WHERE
 			fromCurrency = ? AND
@@ -65,24 +86,6 @@ func match(tx *sql.Tx, lr LimitRequest) (database.LimitRow, bool) {
 }
 
 func Limit(db *sql.DB, lr LimitRequest, instance *smartContract.SmartContract, client *ethclient.Client) (LimitResult, *types.Transaction, error) {
-	markPending := `
-		DELETE FROM limitOrders
-		WHERE id = ?;
-
-		INSERT INTO transactions (sourceAddress, targetAddress, sourceCurr, targetCurr, sourceAmount, targetAmount, status)
-		VALUES (?, ?, ?, ?, ?, ?, 'PEND');
-	`
-
-	markDone := `
-		UPDATE transactions 
-		SET status = 'DONE'
-		WHERE id = ?;
-	`
-
-	insertToBook := `
-		INSERT INTO limitOrders(sourceAddress, sourceAmount, rate, fromCurrency, toCurrency)
-		VALUES (?, ?, ?, ?, ?);
-	`
 	tx, _ := db.Begin()
 	var (
 		err          error
@@ -90,8 +93,11 @@ func Limit(db *sql.DB, lr LimitRequest, instance *smartContract.SmartContract, c
 		result       database.LimitRow
 		txc          *types.Transaction
 	)
-	result, returnResult.IsMatched = match(tx, lr)
 
+	// try to match first
+	result, returnResult.IsMatched = match(tx, lr)
+	
+	// swap if matched, insert into database if not
 	if returnResult.IsMatched {
 		var transaction database.TransactionRow
 		transaction.SourceAddress = result.SourceAddress
@@ -105,13 +111,15 @@ func Limit(db *sql.DB, lr LimitRequest, instance *smartContract.SmartContract, c
 			transaction.SourceAmount = lr.SourceAmount.Mul(result.Rate)
 			transaction.TargetAmount = lr.SourceAmount
 		}
-
+		
+		// filling in return results for caller to process
 		returnResult.SwapDetails.TradedAddress = transaction.SourceAddress
 		returnResult.SwapDetails.TradedAmount = transaction.TargetAmount
 		returnResult.SwapDetails.ReceivedAmount = transaction.SourceAmount
 		returnResult.SwapDetails.FromCurr = transaction.TargetCurr
 		returnResult.SwapDetails.ToCurr = transaction.SourceCurr
-
+		
+		// mark transaction as pending
 		rslt, err := tx.Exec(markPending,
 			result.Id,
 			transaction.SourceAddress,
@@ -123,6 +131,7 @@ func Limit(db *sql.DB, lr LimitRequest, instance *smartContract.SmartContract, c
 		)
 
 		// calling Smart Contract to trade
+		// format the trade request
 		request := blockchain.SMTradeContract{
 			SourceAddress: transaction.SourceAddress,
 			TargetAddress: transaction.TargetAddress,
@@ -157,8 +166,9 @@ func Limit(db *sql.DB, lr LimitRequest, instance *smartContract.SmartContract, c
 				return
 			}
 			tx2.Commit()
-		}(txc, client, rslt)
-
+		} (txc, client, rslt)
+		
+		// filling the rest of the result
 		returnResult.SwapDetails.TradedAddress = transaction.SourceAddress
 		returnResult.SwapDetails.TradedAmount = transaction.TargetAmount
 		returnResult.SwapDetails.ReceivedAmount = transaction.SourceAmount

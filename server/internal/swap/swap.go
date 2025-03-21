@@ -47,6 +47,32 @@ type RateRequest struct {
 	TargetCurr    string
 }
 
+// define sql queries
+var orderMatch string = `
+	SELECT * FROM limitOrders WHERE 
+		sourceAddress <> ? AND
+		fromCurrency = ? AND 
+		toCurrency = ? AND
+		rate <= ? AND
+		rate >= ?
+	ORDER BY rate DESC;
+`
+
+var markPending string = `
+	DELETE FROM limitOrders 
+	WHERE id = ?;
+
+	INSERT INTO transactions (sourceAddress, targetAddress, sourceCurr, targetCurr, sourceAmount, targetAmount, status)
+	VALUES (?, ?, ?, ?, ?, ?, 'PEND');
+`
+
+var markDone string = `
+	UPDATE transactions 
+	SET status = 'DONE'
+	WHERE id = ?;
+`
+
+
 func GetRate(db *sql.DB, req RateRequest) (decimal.Decimal, error) {
 	tx, err := db.Begin()
 	if err != nil {
@@ -89,30 +115,9 @@ func Swap(db *sql.DB, sr SwapRequest, instance *smartContract.SmartContract, cli
 		returnValues SwapResult
 		txc          *types.Transaction
 	)
+
 	tx, err := db.Begin()
-	orderMatch := `
-		SELECT * FROM limitOrders WHERE 
-			sourceAddress <> ? AND
-			fromCurrency = ? AND 
-			toCurrency = ? AND
-			rate <= ? AND
-			rate >= ?
-		ORDER BY rate DESC;
-
-	`
-	markPending := `
-		DELETE FROM limitOrders 
-		WHERE id = ?;
-
-		INSERT INTO transactions (sourceAddress, targetAddress, sourceCurr, targetCurr, sourceAmount, targetAmount, status)
-		VALUES (?, ?, ?, ?, ?, ?, 'PEND');
-	`
-
-	markDone := `
-		UPDATE transactions 
-		SET status = 'DONE'
-		WHERE id = ?;
-	`
+	
 	var (
 		rate, _     = sr.Rate.Pow(decimal.NewFromInt(-1)).Float64()
 		slippage, _ = sr.Slippage.Float64()
@@ -159,13 +164,14 @@ func Swap(db *sql.DB, sr SwapRequest, instance *smartContract.SmartContract, cli
 		transaction.SourceAmount = swapTargetAmount
 		transaction.TargetAmount = sr.SourceAmount
 	}
-	// filling in the rest of the transaction
+	// filling in the rest of the transaction to be recorded later
 	transaction.SourceAddress = result.SourceAddress
 	transaction.TargetAddress = sr.SourceAddress
 	transaction.SourceCurr = result.FromCurr
 	transaction.TargetCurr = result.ToCurr
 
 	// calling Smart Contract to trade
+	// format the request
 	request := blockchain.SMTradeContract{
 		SourceAddress: transaction.SourceAddress,
 		TargetAddress: transaction.TargetAddress,
@@ -176,7 +182,12 @@ func Swap(db *sql.DB, sr SwapRequest, instance *smartContract.SmartContract, cli
 	}
 
 	txc, err = blockchain.ExecuteTrade(instance, client, request)
-
+	if err != nil {
+		log.Println("smart contract swap failed!")
+		return returnValues, txc, err
+	}
+	
+	// mark the transaction as done but pending
 	rslt, err := tx.Exec(markPending,
 		result.Id,
 		transaction.SourceAddress,
@@ -186,9 +197,15 @@ func Swap(db *sql.DB, sr SwapRequest, instance *smartContract.SmartContract, cli
 		transaction.SourceAmount,
 		transaction.TargetAmount,
 	)
+	
 
+	if err = tx.Commit(); err != nil {
+		log.Println("swap.go: database update failed")
+		return returnValues, txc, err
+	}
+
+	// async, wait for transaction to be mined, then update the transaction
 	go func(txc *types.Transaction, client *ethclient.Client, rslt driver.Result) {
-		// async, wait for transaction to be mined, then update the transaction
 		tx2, _ := db.Begin()
 		id, err1 := rslt.LastInsertId()
 		if err1 != nil {
@@ -204,15 +221,9 @@ func Swap(db *sql.DB, sr SwapRequest, instance *smartContract.SmartContract, cli
 			return
 		}
 		tx2.Commit()
-	}(txc, client, rslt)
-
-	if err = tx.Commit(); err != nil {
-		log.Println("swap.go: database update failed")
-		return returnValues, txc, err
-	}
-
-	log.Println("swap successfully")
-
+	} (txc, client, rslt)
+	
+	// preparing the swap result for caller to process
 	returnValues.TradedAddress = transaction.SourceAddress
 	returnValues.TradedAmount = transaction.TargetAmount
 	returnValues.ReceivedAmount = transaction.SourceAmount

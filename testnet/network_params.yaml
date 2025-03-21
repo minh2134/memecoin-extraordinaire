@@ -6,7 +6,7 @@ participants:
     cl_type: teku
 network_params:
   network_id: "12345"
-  prefunded_accounts: '{"0x25941dC771bB64514Fc8abBce970307Fb9d477e9": {"balance": "10000000000000ETH"}}'
+  prefunded_accounts: '{"0x8019F8FA7b20c68F7CF4Bb4d74F13AB54d7f57f3": {"balance": "10000000000000ETH"}, "0x9C0802a055D25040C233cCF7aEd8Fe9339c1b8c6": {"balance": "10000000000000ETH"}, "0xb0d4A8965D85BE95828DEE79B5EC8fe51C9da53e": {"balance": "10000000000000ETH"}, "0xfD143FbAe1682c2b2376269B4EDff67b5C0bc9eE": {"balance": "10000000000000ETH"}}'
 additional_services:
   - dora
   - blockscout
