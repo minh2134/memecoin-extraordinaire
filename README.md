@@ -11,8 +11,6 @@ You will need to have:
 - go
 - yarn
 - sqlite
-- kurtosis
-- docker
 
 # Start the backend
 Refer to `server/README.md`
