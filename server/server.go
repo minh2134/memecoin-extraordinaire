@@ -3,14 +3,8 @@
 package main
 
 import (
-	"database/sql"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"log"
-	"net/http"
-
 	// internal server packages
+	"os"
 	"server/internal/blockchain"
 	"server/internal/database"
 	"server/internal/limit"
@@ -18,8 +12,16 @@ import (
 	"server/internal/smartContract"
 	"server/internal/swap"
 
+	"database/sql"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log"
+	"net/http"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/joho/godotenv"
 )
 
 // global pointers to pass around in the handler
@@ -43,8 +45,14 @@ func main() {
 	var err error
 	mux := http.NewServeMux()
 
+	// loading env file
+	err = godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	// establishing DB availablity
-	db, err = database.Open()
+	db, err = database.Open(os.Getenv("ME_DATABASE_PATH"))
 
 	if err != nil {
 		log.Fatal("Opening database failed.")
@@ -70,10 +78,12 @@ func main() {
 	
 	// Deploy the transaction on chain
 	log.Println("Deploying the contract")
-	smAddress, instance, err = blockchain.DeploySmartContract(client)
+	smAddress, instance, err = blockchain.DeploySmartContract(os.Getenv("ME_SMACON_ADDRESS"), client)
 	if err != nil {
 		log.Fatal(err)
 	} 
+	log.Println("Consider to add this line to the .env file to skip the deployment on next run:")
+	log.Println("ME_SMACON_ADDRESS=", smAddress.Hex())
 
 	// Deploy the price feed contracts on chain
 	priceFeedContracts := []string {
@@ -81,7 +91,6 @@ func main() {
 		"0x14866185B1962B63C3Ea9E03Bc1da838bab34C19", // DAI/USD
 		"0xc0F82A46033b8BdBA4Bb0B0e28Bc2006F64355bC", // SNX/USD
 	}
-	log.Println(priceFeedContracts)
 	priceFeeds, err := blockchain.LoadPriceFeeds(priceFeedContracts, client)
 	
 	// assign the results to global instances

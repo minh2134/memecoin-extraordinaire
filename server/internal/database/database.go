@@ -110,7 +110,12 @@ var insertMock string = `
 				(?, ?, ?, ?, ?);
 `
 
-func Open() (*sql.DB, error) {
+func Open(userFile string) (*sql.DB, error) {
+	// load dbFile path if the user set custom path
+	if userFile != "" {
+		dbFile = userFile
+	}
+
 	if _, err := os.Stat(dbFile); err != nil {
 		needBootstrap = true
 	}

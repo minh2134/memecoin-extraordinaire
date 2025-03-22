@@ -3,6 +3,15 @@
 # Backend operations
 We assume your working directory is `server/`, which is the same directory as this file.
 
+# Configuration
+The backend first reads the `.env` file at the root `server/` folder (or wherever your binary is) for config envvar. First copy the provided `.env.example` to `.env`:
+
+```
+$ cp .env.example .env
+```
+
+Then you can start opening `.env` file with your favorite text editor and follow the comments there
+
 # Starting the backend
 First, start the localnet:
 

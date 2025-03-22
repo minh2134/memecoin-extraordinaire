@@ -9,6 +9,7 @@ import (
 	"math"
 	"math/big"
 	"math/rand"
+	"os"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -16,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/joho/godotenv"
 	"github.com/shopspring/decimal"
 
 	"server/internal/priceFeed"
@@ -53,6 +55,7 @@ var (
 			"DAI",
 			"SNX",
 		}
+	isDeployed bool = false
 )
 
 // pre-funded accounts for testing
@@ -77,6 +80,11 @@ var godWallet Wallet = Wallet {
 }
 
 func Conn() (*ethclient.Client, error) {
+	// if user specified, take the url
+	if urlTemp := os.Getenv("ME_SEPOLIA"); urlTemp != "" {
+		urlRPC = urlTemp
+	}
+
 	client, err := ethclient.Dial(urlRPC)
 	if err != nil {
 		log.Println("blockchain.go: something went wrong")
@@ -142,7 +150,7 @@ func GetBalance(client *ethclient.Client, wallet Wallet) (float64, *big.Int, err
 	return ethBalance, balance, err
 }
 
-func DeploySmartContract(client *ethclient.Client) (common.Address,
+func DeploySmartContract(userAddress string, client *ethclient.Client) (common.Address,
 	*smartContract.SmartContract,
 	error) {
 	var (
@@ -154,6 +162,18 @@ func DeploySmartContract(client *ethclient.Client) (common.Address,
 	if err != nil {
 		return address, instance, err
 	}
+	
+	// load the smart contract address if the user already specified it
+	if userAddress != "" {
+		log.Println("Already has a deployed contract, skipping the deployment...")
+		isDeployed = true
+		address = common.HexToAddress(userAddress)
+		instance, err = smartContract.NewSmartContract(address, client)
+
+		return address, instance, err
+	}
+
+
 	address, tx, instance, err = smartContract.DeploySmartContract(auth, client)
 	// Wait for contract to be mined to continue
 	log.Println("Waiting for the contract to be mined...")
@@ -165,7 +185,7 @@ func DeploySmartContract(client *ethclient.Client) (common.Address,
 		log.Println("New decimal point:", decimals)
 	}
 	log.Print("Done!")
-
+	
 	return address, instance, err
 }
 
@@ -192,6 +212,11 @@ func GetCurrBalance(smAddress common.Address,
 
 func Mint(instance *smartContract.SmartContract, client *ethclient.Client) error {
 	// minting some tokens for accounts to trade
+	if isDeployed {
+		log.Println("already deployed and minted, skipping...")
+		return nil
+	}
+
 	var (
 		
 		err error
