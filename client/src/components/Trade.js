@@ -21,8 +21,8 @@ const Trade = ({
   const [limitToAmount, setLimitToAmount] = useState('');
   
   // Common states
-  const [fromState, setFromState] = useState('BTC');
-  const [toState, setToState] = useState('DOGE');
+  const [fromState, setFromState] = useState('DAI');
+  const [toState, setToState] = useState('SNX');
   const [isLoading, setIsLoading] = useState(false);
   const [transactionStatus, setTransactionStatus] = useState(null);
   const [customRate, setCustomRate] = useState('');
