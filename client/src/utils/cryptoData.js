@@ -9,29 +9,17 @@ export const cryptoList = [
     nicknames: ['btc', 'bitcoin', 'digital gold', 'crypto king']
   },
   { 
-    id: 'dogecoin', 
-    symbol: 'DOGE', 
-    name: 'Dogecoin', 
-    nicknames: ['doge', 'dogecoin', 'much wow']
+    id: 'dai', 
+    symbol: 'DAI', 
+    name: 'Dai', 
+    nicknames: ['dai', 'stablecoin', 'maker']
   },
   { 
-    id: 'shiba-inu', 
-    symbol: 'SHIB', 
-    name: 'Shiba Inu', 
-    nicknames: ['shib', 'shiba', 'doge killer']
-  },
-  { 
-    id: 'bonk', 
-    symbol: 'BONK', 
-    name: 'Bonk', 
-    nicknames: ['bonk', 'solana dog']
-  },
-  { 
-    id: 'pepe', 
-    symbol: 'PEPE', 
-    name: 'Pepe', 
-    nicknames: ['pepe', 'frog coin']
-  },
+    id: 'havven', 
+    symbol: 'SNX', 
+    name: 'Synthetix', 
+    nicknames: ['snx', 'synthetix', 'synthetic assets']
+  }
 ];
 
 // Helper function to get all coin symbols
@@ -48,6 +36,12 @@ export const getCoinById = (id) => cryptoList.find(coin => coin.id === id);
 
 // Helper function to get simplified token list (for dropdowns, etc.)
 export const getSimpleTokenList = () => cryptoList.map(coin => ({
+  id: coin.id,
   name: coin.name,
-  symbol: coin.symbol
+  symbol: coin.symbol,
+  image: coin.id === 'bitcoin' 
+    ? 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png'
+    : coin.id === 'dai' 
+    ? 'https://assets.coingecko.com/coins/images/9956/large/4943.png'
+    : 'https://assets.coingecko.com/coins/images/3406/large/SNX.png'
 })); 

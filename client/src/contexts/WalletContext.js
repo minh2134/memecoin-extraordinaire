@@ -14,6 +14,7 @@ export function WalletProvider({ children }) {
   const [balance, setBalance] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [tokenBalances, setTokenBalances] = useState({});
 
   const assignWallet = async () => {
     setLoading(true);
@@ -37,12 +38,37 @@ export function WalletProvider({ children }) {
     }
   };
 
+  const fetchTokenBalances = async (address) => {
+    if (!address) return;
+    
+    const tokens = ['BTC', 'DAI', 'SNX']; // Only these three coins
+    const balances = {};
+    
+    try {
+      for (const token of tokens) {
+        const response = await fetch(`http://localhost:8080/account/curr/${token}`);
+        if (response.ok) {
+          const data = await response.json();
+          balances[token] = data.amount;
+        } else {
+          balances[token] = '0';
+        }
+      }
+      
+      setTokenBalances(balances);
+    } catch (error) {
+      console.error('Error fetching token balances:', error);
+    }
+  };
+
   const value = {
     wallet,
     balance,
     loading,
     error,
-    assignWallet
+    assignWallet,
+    tokenBalances,
+    fetchTokenBalances
   };
 
   return (

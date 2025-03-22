@@ -42,9 +42,9 @@ const Wallet = ({ isOpen, onClose }) => {
       setIsLoading(true);
       console.log(`Connecting ${selectedWallet} wallet...`);
       
-      // Get a random prefunded wallet from the backend
+      // Get a prefunded wallet from the backend
       const walletInfo = await assignWallet();
-      console.log('Kurtosis wallet assigned:', walletInfo);
+      console.log('Wallet assigned:', walletInfo);
       
       alert(`Connected to wallet: ${walletInfo.address}\nBalance: ${walletInfo.balance} ETH`);
       onClose();
@@ -99,7 +99,7 @@ const Wallet = ({ isOpen, onClose }) => {
             <h3 className="font-heading text-xl text-white mb-6">How to connect to your wallet</h3>
             {isLoading ? (
               <div className="w-48 h-48 mx-auto mb-6 flex items-center justify-center">
-                <p className="text-white">Connecting to Kurtosis...</p>
+                <p className="text-white">Connecting to Network...</p>
               </div>
             ) : (
               <img 

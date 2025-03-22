@@ -9,30 +9,22 @@ class Web3Service {
     this.contract = null;
     this.account = null;
     this.isInitialized = false;
-    this.contractAddress = null; // Will be set when contract is deployed or loaded
+    this.contractAddress = "0x050A1644A9A5364e9c6bc42d7A7B10Dd1beF07d0"; // Using the specified address
   }
 
   async initialize() {
     try {
-      // Connect to Kurtosis blockchain on port 32798
-      this.web3 = new Web3('http://localhost:32798');
+      // Connect to Sepolia instead of Kurtosis
+      this.web3 = new Web3('https://sepolia.infura.io/v3/5039db0cac5f44b3bd15771581f51116');
       
       // Check connection by getting network ID
       const networkId = await this.web3.eth.net.getId();
-      console.log(`Connected to Kurtosis blockchain. Network ID: ${networkId}`);
+      console.log(`Connected to Sepolia testnet. Network ID: ${networkId}`);
       
       this.isInitialized = true;
       
-      // Try to load the contract if it exists
-      try {
-        // Load deployed contract from localStorage or config
-        this.contractAddress = localStorage.getItem('contractAddress');
-        if (this.contractAddress) {
-          this.loadContract(this.contractAddress);
-        }
-      } catch (contractError) {
-        console.warn('Contract not loaded yet:', contractError.message);
-      }
+      // Load the contract with the specified address
+      this.loadContract(this.contractAddress);
       
       return true;
     } catch (error) {
@@ -68,7 +60,7 @@ class Web3Service {
     }
     
     try {
-      console.log('Requesting a prefunded wallet from Kurtosis via backend...');
+      console.log('Requesting a prefunded wallet via backend...');
       
       const response = await fetch('http://localhost:8080/auth', {
         method: 'GET',
