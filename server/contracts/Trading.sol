@@ -38,10 +38,8 @@ contract Trading {
     constructor() {
         // Add some initial currencies
         addCurrency("BTC", 1000000 * (10**decimals));
-	addCurrency("DOGE", 1000000 * (10**decimals));
-	addCurrency("SHIB", 1000000 * (10**decimals));
-	addCurrency("BONK", 1000000 * (10**decimals));
-	addCurrency("PEPE", 1000000 * (10**decimals));
+	addCurrency("DAI", 1000000 * (10**decimals));
+	addCurrency("SNX", 1000000 * (10**decimals));
     }
 
     // Function to add a new currency
