@@ -18,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/shopspring/decimal"
 
+	"server/internal/priceFeed"
 	"server/internal/smartContract"
 )
 
@@ -43,10 +44,15 @@ type BalanceRequest struct {
 }
 
 var (
-	urlRPC      string         = "http://127.0.0.1:32798"
+	urlRPC      string         = "https://sepolia.infura.io/v3/5039db0cac5f44b3bd15771581f51116"
 	testAccount common.Address = common.HexToAddress(
 		"0x25941dC771bB64514Fc8abBce970307Fb9d477e9")
 	decimals decimal.Decimal = decimal.NewFromInt(int64(math.Pow10(8)))
+	currency = [3]string{
+			"BTC",
+			"DAI",
+			"SNX",
+		}
 )
 
 // pre-funded accounts for testing
@@ -187,13 +193,7 @@ func GetCurrBalance(smAddress common.Address,
 func Mint(instance *smartContract.SmartContract, client *ethclient.Client) error {
 	// minting some tokens for accounts to trade
 	var (
-		currency = [5]string{
-			"DOGE",
-			"BTC",
-			"SHIB",
-			"BONK",
-			"PEPE",
-		}
+		
 		err error
 		wg  sync.WaitGroup
 	)
@@ -256,4 +256,65 @@ func ExecuteTrade(instance *smartContract.SmartContract, client *ethclient.Clien
 	tx, err = instance.ExecuteTrade(auth, targetAddress, request.SourceCurr, request.TargetCurr, sourceAmount, targetAmount)
 
 	return tx, err
+}
+
+// =========== Price feed section ==============
+func LoadPriceFeeds(addresses []string, 
+			client *ethclient.Client) ([]*priceFeed.PriceFeed, error) {
+	
+	// find price feed contract addresses on Chainlink website
+	var (
+		instances []*priceFeed.PriceFeed
+		err error
+	)
+	
+	for _, add := range addresses {
+		address := common.HexToAddress(add)
+		instance, err := priceFeed.NewPriceFeed(address, client)
+		if err != nil {
+			return instances, err
+		}
+
+		instances = append(instances, instance)
+	}
+
+	return instances, err
+}
+
+func GetRate(curr1 *priceFeed.PriceFeed, 
+		curr2 *priceFeed.PriceFeed, 
+		client *ethclient.Client) (decimal.Decimal, error){
+
+		var rate decimal.Decimal
+		// get the raw data
+		curr1Answer, err := curr1.LatestRoundData(nil)
+		if err != nil {
+			log.Println("blockchain.go: can't get curr1 data")
+			return rate, err
+		}
+
+		curr2Answer, err := curr2.LatestRoundData(nil)
+		if err != nil {
+			log.Println("blockchain.go: can't get curr2 data")
+			return rate, err
+		}
+
+		// get the decimals
+		curr1Decimals, err := curr1.Decimals(nil)
+		if err != nil {
+			log.Println("blockchain.go: can't get curr1 decimals")
+			return rate, err
+		}
+
+		curr2Decimals, err := curr2.Decimals(nil)
+		if err != nil {
+			log.Println("blockchain.go: can't get curr2 decimals")
+			return rate, err
+		}
+
+		// convert the answers to decimals
+		curr1Rate := decimal.NewFromBigInt(curr1Answer.Answer, int32(curr1Decimals))
+		curr2Rate := decimal.NewFromBigInt(curr2Answer.Answer, int32(curr2Decimals))
+
+		return curr1Rate.Div(curr2Rate), err
 }

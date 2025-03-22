@@ -5,6 +5,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"server/internal/blockchain"
 	"server/internal/database"
 	"server/internal/limit"
+	"server/internal/priceFeed"
 	"server/internal/smartContract"
 	"server/internal/swap"
 
@@ -27,6 +29,9 @@ var (
 	wallet    blockchain.Wallet
 	smAddress common.Address
 	instance  *smartContract.SmartContract
+	btcPrice  *priceFeed.PriceFeed
+	daiPrice  *priceFeed.PriceFeed
+	snxPrice  *priceFeed.PriceFeed
 )
 
 func enableCORS(w *http.ResponseWriter) {
@@ -61,14 +66,29 @@ func main() {
 		log.Fatal(err)
 	}
 	defer client.Close()
-
+	
+	
 	// Deploy the transaction on chain
 	log.Println("Deploying the contract")
 	smAddress, instance, err = blockchain.DeploySmartContract(client)
 	if err != nil {
 		log.Fatal(err)
-	}
+	} 
 
+	// Deploy the price feed contracts on chain
+	priceFeedContracts := []string {
+		"0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43", // BTC/USD
+		"0x14866185B1962B63C3Ea9E03Bc1da838bab34C19", // DAI/USD
+		"0xc0F82A46033b8BdBA4Bb0B0e28Bc2006F64355bC", // SNX/USD
+	}
+	log.Println(priceFeedContracts)
+	priceFeeds, err := blockchain.LoadPriceFeeds(priceFeedContracts, client)
+	
+	// assign the results to global instances
+	btcPrice = priceFeeds[0]
+	daiPrice = priceFeeds[1]
+	snxPrice = priceFeeds[2]
+	
 	// Mint some tokens for trading
 	log.Println("Minting tokens to accounts for trading...")
 	err = blockchain.Mint(instance, client)
@@ -148,18 +168,6 @@ func swapHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println(err)
 	}
-	/*
-		// test in case mysterious stuff appears
-		testSwapReq := swap.SwapRequest {
-			SourceCurr: 	"PEPE",
-			TargetCurr: 	"BTC",
-			SourceAmount: 	1499,
-			Rate:		0.58823529411
-			SourceAddress: 	"sdasdaw",
-		}
-
-		swap.Swap(db, testSwapReq)
-	*/
 }
 
 func limitHandler(w http.ResponseWriter, r *http.Request) {
@@ -238,21 +246,39 @@ func currHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(ret)
 }
 
+// helper function to find pricefeed
+func getPriceFeed(curr string) (*priceFeed.PriceFeed, error) {
+	if curr == "BTC" {
+		return btcPrice, nil
+	}
+	
+	if curr == "DAI" {
+		return daiPrice, nil
+	}
+
+	if curr == "SNX" {
+		return snxPrice, nil
+	}
+
+	return nil, errors.New("not found") // nothing else
+}
+
 func rateSuggestorHandler(w http.ResponseWriter, r *http.Request) {
 	enableCORS(&w)
+	
+	sourceCurr, err := getPriceFeed(r.PathValue("sourceCurr"))
+	if err != nil {
+		http.NotFound(w, r)
+		return 
+	}
 
-	if wallet.Address == "" {
-		w.WriteHeader(http.StatusBadRequest)
+	targetCurr, err := getPriceFeed(r.PathValue("targetCurr"))
+	if err != nil {
+		http.NotFound(w, r)
 		return
 	}
 
-	rateRequest := swap.RateRequest{
-		SourceAddress: wallet.Address,
-		SourceCurr:    r.PathValue("sourceCurr"),
-		TargetCurr:    r.PathValue("targetCurr"),
-	}
-
-	rate, err := swap.GetRate(db, rateRequest)
+	rate, err := blockchain.GetRate(sourceCurr, targetCurr, client)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return

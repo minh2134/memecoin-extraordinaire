@@ -139,11 +139,9 @@ func Bootstrap(d *sql.DB) error {
 	}
 
 	var currencies = [5]string{
-		"DOGE",
 		"BTC",
-		"SHIB",
-		"BONK",
-		"PEPE",
+		"DAI",
+		"SNX",
 	}
 
 	var addresses = [3]string{
