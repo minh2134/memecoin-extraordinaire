@@ -13,9 +13,6 @@ $ cp .env.example .env
 Then you can start opening `.env` file with your favorite text editor and follow the comments there
 
 # Starting the backend
-First, start the localnet:
-
-```sudo kurtosis run github.com/ethpandaops/ethereum-package --args-file ../testnet/network_params.yaml --image-download always --enclave testnet```
 
 Then, start the backend:
 
