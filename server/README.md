@@ -14,7 +14,7 @@ Then you can start opening `.env` file with your favorite text editor and follow
 
 # Starting the backend
 
-Then, start the backend:
+start the backend:
 
 ```go run .```
 
